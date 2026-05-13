@@ -1,0 +1,1680 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDS Builder</title>
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --c-bg:       #f1f5f9;
+  --c-surface:  #ffffff;
+  --c-border:   #e2e8f0;
+  --c-text:     #0f172a;
+  --c-muted:    #64748b;
+  --c-primary:  #2563eb;
+  --c-primary-h:#1d4ed8;
+  --c-danger:   #dc2626;
+  --c-success:  #16a34a;
+  --c-warn:     #d97706;
+  --facet-entity:         #7c3aed;
+  --facet-attribute:      #0284c7;
+  --facet-property:       #16a34a;
+  --facet-classification: #b45309;
+  --facet-material:       #db2777;
+  --facet-partof:         #0f766e;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+/* ── Layout ────────────────────────────────────────────────────── */
+body { background: var(--c-bg); min-height: 100vh; }
+
+.app-header {
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-title { font-weight: 700; font-size: 15px; color: var(--c-text); }
+.brand-divider { width: 1px; height: 24px; background: var(--c-border); }
+.header-actions { display: flex; gap: 8px; }
+
+.app-body {
+  display: grid; grid-template-columns: 300px 1fr;
+  height: calc(100vh - 56px); overflow: hidden;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--c-surface); border-right: 1px solid var(--c-border);
+  overflow-y: auto; padding: 20px 16px;
+}
+.sidebar h2 { font-size: 13px; font-weight: 600; color: var(--c-muted);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+
+/* ── Main ──────────────────────────────────────────────────────── */
+.main { overflow-y: auto; padding: 24px; }
+.main-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.main-header h1 { font-size: 20px; font-weight: 700; }
+.spec-count { font-size: 12px; color: var(--c-muted); margin-left: 8px; }
+
+/* ── Form Elements ─────────────────────────────────────────────── */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--c-muted); margin-bottom: 4px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--c-border); border-radius: 6px;
+  font-size: 13px; font-family: inherit; color: var(--c-text); background: white;
+  transition: border-color .15s;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.field-hint { font-size: 11px; color: var(--c-muted); margin-bottom: 6px; line-height: 1.4; }
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+  border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+  border: 1px solid transparent; transition: all .15s; white-space: nowrap;
+}
+.btn-primary { background: var(--c-primary); color: white; border-color: var(--c-primary); }
+.btn-primary:hover { background: var(--c-primary-h); border-color: var(--c-primary-h); }
+.btn-secondary { background: white; color: var(--c-text); border-color: var(--c-border); }
+.btn-secondary:hover { background: var(--c-bg); }
+.btn-ghost { background: transparent; color: var(--c-muted); border-color: transparent; padding: 5px 8px; }
+.btn-ghost:hover { background: var(--c-bg); color: var(--c-text); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-icon { padding: 6px; border-radius: 6px; }
+
+/* ── Spec Cards ────────────────────────────────────────────────── */
+.specs-grid { display: flex; flex-direction: column; gap: 12px; }
+.spec-card {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden; transition: box-shadow .15s;
+}
+.spec-card:hover { box-shadow: var(--shadow-lg); }
+.spec-card-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer;
+}
+.spec-index {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--c-primary);
+  color: white; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.spec-title { flex: 1; }
+.spec-name { font-weight: 600; font-size: 14px; }
+.spec-meta { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+.spec-badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-version { background: #eff6ff; color: #1d4ed8; }
+.spec-actions { display: flex; gap: 4px; }
+.spec-card-body { padding: 0 16px 14px; display: none; }
+.spec-card-body.open { display: block; }
+.spec-facets-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.facet-col-label { font-size: 11px; font-weight: 600; color: var(--c-muted);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+
+/* ── Facet Pills ───────────────────────────────────────────────── */
+.facet-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
+  border-radius: 4px; font-size: 11px; margin: 2px; font-weight: 500;
+}
+.fp-entity         { background: #ede9fe; color: var(--facet-entity); }
+.fp-attribute      { background: #e0f2fe; color: var(--facet-attribute); }
+.fp-property       { background: #dcfce7; color: var(--facet-property); }
+.fp-classification { background: #fef3c7; color: var(--facet-classification); }
+.fp-material       { background: #fce7f3; color: var(--facet-material); }
+.fp-partof         { background: #ccfbf1; color: var(--facet-partof); }
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200;
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 20px; overflow-y: auto;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--c-surface); border-radius: 12px; box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 900px; margin: auto;
+  display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid var(--c-border);
+}
+.modal-header h2 { font-size: 16px; font-weight: 700; }
+.modal-body { padding: 24px; flex: 1; overflow-y: auto; }
+.modal-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 16px 24px; border-top: 1px solid var(--c-border);
+}
+
+/* ── Spec Editor ───────────────────────────────────────────────── */
+.spec-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.spec-meta-grid .full { grid-column: 1 / -1; }
+.occurs-row { display: flex; align-items: center; gap: 8px; }
+.occurs-row input { width: 80px !important; }
+.occurs-row span { color: var(--c-muted); font-size: 12px; }
+
+/* ── Occurs presets ────────────────────────────────────────────── */
+.occ-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.occ-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  border: 1.5px solid var(--c-border); background: white; cursor: pointer;
+  color: var(--c-muted); transition: all .15s; white-space: nowrap;
+}
+.occ-btn:hover { border-color: var(--c-primary); color: var(--c-primary); background: #f8faff; }
+.occ-btn.active { border-color: var(--c-primary); background: #eff6ff; color: var(--c-primary); }
+
+/* ── Clause columns ────────────────────────────────────────────── */
+.clauses-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 4px; }
+.clause-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--c-border);
+}
+.clause-title { font-size: 13px; font-weight: 700; }
+.clause-subtitle { font-size: 11px; color: var(--c-muted); margin-top: 1px; }
+.facets-list { display: flex; flex-direction: column; gap: 0; min-height: 80px; }
+.facets-empty { text-align: center; color: var(--c-muted); font-size: 12px; padding: 24px;
+  border: 1.5px dashed var(--c-border); border-radius: var(--radius); }
+.add-facet-row { margin-top: 8px; display: flex; gap: 6px; align-items: center; }
+.add-facet-row select { flex: 1; }
+
+/* ── AND connector ─────────────────────────────────────────────── */
+.and-connector {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 0; user-select: none;
+}
+.and-connector::before, .and-connector::after {
+  content: ''; flex: 1; height: 1px; background: var(--c-border);
+}
+.and-badge {
+  font-size: 10px; font-weight: 700; color: var(--c-muted);
+  padding: 1px 8px; border-radius: 10px;
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  letter-spacing: .06em; flex-shrink: 0;
+}
+
+/* ── Facet Cards ───────────────────────────────────────────────── */
+.facet-card { border: 1.5px solid var(--c-border); border-radius: var(--radius); overflow: hidden; }
+.facet-card[data-type="entity"]         { border-left: 3px solid var(--facet-entity); }
+.facet-card[data-type="attribute"]      { border-left: 3px solid var(--facet-attribute); }
+.facet-card[data-type="property"]       { border-left: 3px solid var(--facet-property); }
+.facet-card[data-type="classification"] { border-left: 3px solid var(--facet-classification); }
+.facet-card[data-type="material"]       { border-left: 3px solid var(--facet-material); }
+.facet-card[data-type="partof"]         { border-left: 3px solid var(--facet-partof); }
+
+.facet-card-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; cursor: pointer; user-select: none; background: #fafafa;
+}
+.facet-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-entity         { background: var(--facet-entity); }
+.dot-attribute      { background: var(--facet-attribute); }
+.dot-property       { background: var(--facet-property); }
+.dot-classification { background: var(--facet-classification); }
+.dot-material       { background: var(--facet-material); }
+.dot-partof         { background: var(--facet-partof); }
+
+.facet-type-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; }
+.tl-entity         { color: var(--facet-entity); }
+.tl-attribute      { color: var(--facet-attribute); }
+.tl-property       { color: var(--facet-property); }
+.tl-classification { color: var(--facet-classification); }
+.tl-material       { color: var(--facet-material); }
+.tl-partof         { color: var(--facet-partof); }
+
+.facet-summary { flex: 1; font-size: 12px; color: var(--c-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.facet-card-body { padding: 12px; border-top: 1px solid var(--c-border); display: none; }
+.facet-card-body.open { display: block; }
+.facet-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.facet-form-grid .full { grid-column: 1 / -1; }
+.facet-form-grid .form-group { margin-bottom: 0; }
+
+/* ── Value editor ──────────────────────────────────────────────── */
+.value-type-tabs { display: flex; gap: 0; margin-bottom: 8px; border: 1px solid var(--c-border);
+  border-radius: 6px; overflow: hidden; }
+.value-tab { flex: 1; padding: 5px 2px; text-align: center; cursor: pointer; font-size: 11px;
+  font-weight: 500; background: white; color: var(--c-muted); border: none; transition: all .15s; }
+.value-tab.active { background: var(--c-primary); color: white; }
+.bounds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.bounds-grid .form-group { margin-bottom: 0; }
+
+/* ── Instructions hint ─────────────────────────────────────────── */
+.instr-group { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--c-border); }
+.instr-group label { color: var(--c-muted) !important; font-style: italic; }
+
+/* ── XML Preview ───────────────────────────────────────────────── */
+.xml-container {
+  background: #0f172a; border-radius: var(--radius); padding: 20px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px; line-height: 1.6; overflow-x: auto;
+  max-height: 65vh; overflow-y: auto; color: #e2e8f0;
+}
+.xml-tag     { color: #93c5fd; }
+.xml-attr    { color: #fde68a; }
+.xml-val     { color: #86efac; }
+.xml-comment { color: #475569; font-style: italic; }
+
+/* ── Misc ──────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--c-border); margin: 16px 0; }
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  background: #1e293b; color: white; padding: 12px 18px;
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  font-size: 13px; transform: translateY(80px); opacity: 0;
+  transition: all .3s; pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ── Version row in sidebar ─────────────────────────────────────── */
+.version-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.version-row .form-group { margin-bottom: 0; }
+
+/* ── IFC version note in modal ──────────────────────────────────── */
+.ifc-note {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+  font-size: 12px; color: #1d4ed8;
+}
+.ifc-note svg { flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="brand">
+    <!-- Logo -->
+    <img src="data:image/png;base64,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" alt="Logo" style="height:36px;display:block;flex-shrink:0" />
+    <div class="brand-divider"></div>
+    <span class="brand-title">IDS Builder</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" id="btn-import">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      IDS importieren
+    </button>
+    <button class="btn btn-secondary btn-sm" id="btn-preview">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      XML Vorschau
+    </button>
+    <button class="btn btn-primary btn-sm" id="btn-export">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      .ids exportieren
+    </button>
+  </div>
+</header>
+
+<!-- ── BODY ──────────────────────────────────────────────────── -->
+<div class="app-body">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h2>IDS Metadaten</h2>
+
+    <!-- IDS Version + IFC Version (global) -->
+    <div class="version-row">
+      <div class="form-group">
+        <label>IDS Version</label>
+        <select id="meta-ids-version">
+          <option value="1.0" selected>IDS 1.0</option>
+          <!-- Zukünftige Versionen werden hier ergänzt -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label>IFC Version</label>
+        <select id="meta-ifc-version">
+          <option value="IFC2X3">IFC2X3</option>
+          <option value="IFC4" selected>IFC4</option>
+          <option value="IFC4X3_ADD2">IFC4X3_ADD2</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Titel <span style="color:var(--c-danger)">*</span></label>
+      <input id="meta-title" placeholder="z.B. Schulhaus Bullinger ARC" />
+    </div>
+    <div class="form-group">
+      <label>Beschreibung</label>
+      <textarea id="meta-description" placeholder="Kurze Beschreibung…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Version</label>
+        <input id="meta-version" placeholder="1.0.0" />
+      </div>
+      <div class="form-group">
+        <label>Datum</label>
+        <input id="meta-date" type="date" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Autor (E-Mail)</label>
+      <input id="meta-author" type="email" placeholder="name@organisation.ch" />
+    </div>
+    <div class="form-group">
+      <label>Copyright</label>
+      <input id="meta-copyright" placeholder="Stadtentwicklung Zürich" />
+    </div>
+    <div class="form-group">
+      <label>Zweck</label>
+      <input id="meta-purpose" placeholder="z.B. Architektur - de-DE" />
+    </div>
+    <div class="form-group">
+      <label>Meilenstein</label>
+      <select id="meta-milestone">
+        <option value="">– kein –</option>
+        <option value="DESIGN">DESIGN</option>
+        <option value="CONSTRUCTION">CONSTRUCTION</option>
+        <option value="OPERATION">OPERATION</option>
+        <option value="MODIFICATION">MODIFICATION</option>
+      </select>
+    </div>
+    <div class="divider"></div>
+    <h2>Facet-Legende</h2>
+    <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+      <span><span class="facet-pill fp-entity">◈ Entity</span> IFC-Typ / Subtyp</span>
+      <span><span class="facet-pill fp-attribute">⊞ Attribute</span> IFC-Attribut</span>
+      <span><span class="facet-pill fp-property">◉ Property</span> Eigenschaft in Pset</span>
+      <span><span class="facet-pill fp-classification">◆ Classification</span> eBKP-H etc.</span>
+      <span><span class="facet-pill fp-material">◎ Material</span> Materialzuweisung</span>
+      <span><span class="facet-pill fp-partof">⊂ PartOf</span> Räuml. Zugehörigkeit</span>
+    </div>
+    <div class="divider"></div>
+    <p style="font-size:11px;color:var(--c-muted);line-height:1.6">
+      Alle 6 IDS-Facetten implementiert · Werttypen: Einzelwert, Aufzählung, Regex, Numerische Grenzen, Textlänge · Cardinality je Facette · Instructions je Facette
+    </p>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-header">
+      <div>
+        <h1>Spezifikationen <span class="spec-count" id="spec-count"></span></h1>
+      </div>
+      <button class="btn btn-primary" id="btn-add-spec">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Neue Spezifikation
+      </button>
+    </div>
+    <div class="specs-grid" id="specs-list">
+      <div style="text-align:center;padding:60px 20px;color:var(--c-muted)">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px">Noch keine Spezifikationen</div>
+        <div style="font-size:13px">Klicke auf «Neue Spezifikation» um zu beginnen.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── SPEC EDITOR MODAL ─────────────────────────────────────────── -->
+<div class="modal-backdrop" id="spec-modal">
+  <div class="modal" style="max-width:960px">
+    <div class="modal-header">
+      <h2 id="modal-title">Spezifikation bearbeiten</h2>
+      <button class="btn btn-ghost btn-icon" id="modal-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="spec-meta-grid">
+        <div class="form-group">
+          <label>Name <span style="color:var(--c-danger)">*</span></label>
+          <input id="spec-name" placeholder="z.B. Wand – Massiv" />
+        </div>
+        <div class="form-group">
+          <label>Identifier</label>
+          <input id="spec-identifier" placeholder="z.B. ELE_001" />
+        </div>
+        <div class="form-group full">
+          <label>Beschreibung</label>
+          <input id="spec-description" placeholder="Kurze Beschreibung der Spezifikation" />
+        </div>
+
+        <!-- IFC Version: global, nur Hinweis -->
+        <div class="form-group full">
+          <div class="ifc-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>IFC-Version: <strong id="modal-ifc-hint">IFC4</strong> — global in den Metadaten festgelegt, gilt für alle Spezifikationen.</span>
+          </div>
+        </div>
+
+        <!-- Erwartete Anzahl im Modell -->
+        <div class="form-group full">
+          <label>Erwartete Anzahl im Modell</label>
+          <div class="field-hint">Wie viele passende Elemente sollen im IFC-Modell vorhanden sein?</div>
+          <div class="occ-presets">
+            <button type="button" class="occ-btn" id="occ-arbitrary" onclick="setOccursPreset('occ-arbitrary')">Beliebig viele</button>
+            <button type="button" class="occ-btn" id="occ-atleast"   onclick="setOccursPreset('occ-atleast')">Mindestens eines</button>
+            <button type="button" class="occ-btn" id="occ-exact"     onclick="setOccursPreset('occ-exact')">Genau eines</button>
+            <button type="button" class="occ-btn" id="occ-custom"    onclick="setOccursPreset('occ-custom')">Benutzerdefiniert</button>
+          </div>
+          <div class="occurs-row" id="occ-custom-row" style="display:none">
+            <input id="spec-min" type="number" min="0" value="0" />
+            <span>bis</span>
+            <input id="spec-max" value="unbounded" />
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label>Instructions (Spezifikationsebene)</label>
+          <input id="spec-instructions" placeholder="Optionale Anweisungen für Modellierer" />
+        </div>
+      </div>
+      <div class="divider"></div>
+      <!-- Facet columns -->
+      <div class="clauses-grid">
+        <!-- Applicability -->
+        <div class="clause-col">
+          <div class="clause-header">
+            <div>
+              <div class="clause-title">Applicability</div>
+              <div class="clause-subtitle">Welche Elemente werden geprüft? (UND-verknüpft)</div>
+            </div>
+          </div>
+          <div class="facets-list" id="app-facets"></div>
+          <div class="add-facet-row">
+            <select id="app-facet-type">
+              <option value="">+ Facet hinzufügen…</option>
+              <option value="entity">Entity</option>
+              <option value="attribute">Attribut</option>
+              <option value="property">Property</option>
+              <option value="classification">Klassifikation</option>
+              <option value="material">Material</option>
+              <option value="partof">PartOf</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="btn-add-app-facet">Hinzufügen</button>
+          </div>
+        </div>
+        <!-- Requirements -->
+        <div class="clause-col">
+          <div class="clause-header">
+            <div>
+              <div class="clause-title">Requirements</div>
+              <div class="clause-subtitle">Was muss vorhanden sein? (UND-verknüpft)</div>
+            </div>
+          </div>
+          <div class="facets-list" id="req-facets"></div>
+          <div class="add-facet-row">
+            <select id="req-facet-type">
+              <option value="">+ Facet hinzufügen…</option>
+              <!-- Entity ist in Requirements nicht zulässig -->
+              <option value="attribute">Attribut</option>
+              <option value="property">Property</option>
+              <option value="classification">Klassifikation</option>
+              <option value="material">Material</option>
+              <option value="partof">PartOf</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="btn-add-req-facet">Hinzufügen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel">Abbrechen</button>
+      <button class="btn btn-primary" id="modal-save">Spezifikation speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── XML PREVIEW MODAL ─────────────────────────────────────────── -->
+<div class="modal-backdrop xml-modal" id="xml-modal">
+  <div class="modal" style="max-width:1000px">
+    <div class="modal-header">
+      <h2>XML Vorschau</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary btn-sm" id="btn-copy-xml">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Kopieren
+        </button>
+        <button class="btn btn-ghost btn-icon" id="xml-modal-close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div class="xml-container" id="xml-preview"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-import" accept=".ids,.xml" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════════════════════════ */
+const IFC_ENTITIES = [
+  'IFCPROJECT','IFCSITE','IFCBUILDING','IFCBUILDINGSTOREY','IFCSPACE',
+  'IFCWALL','IFCWALLSTANDARDCASE','IFCCURTAINWALL',
+  'IFCSLAB','IFCROOF','IFCCOLUMN','IFCBEAM','IFCMEMBER','IFCPLATE',
+  'IFCFOOTING','IFCPILE','IFCWINDOW','IFCDOOR',
+  'IFCSTAIR','IFCSTAIRFLIGHT','IFCRAMP','IFCRAMPFLIGHT',
+  'IFCRAILING','IFCSHADINGDEVICE','IFCCOVERING',
+  'IFCFURNISHINGELEMENT','IFCGEOGRAPHICELEMENT','IFCCIVILELEMENT',
+  'IFCBUILDINGELEMENTPROXY','IFCPROXY',
+];
+
+const PREDEFINED_TYPES = {
+  IFCWALL:              ['SOLIDWALL','ELEMENTEDWALL','RETAININGWALL','PLUMBINGWALL','MOVABLE','PARAPET','USERDEFINED','NOTDEFINED'],
+  IFCSLAB:              ['FLOOR','ROOF','LANDING','BASESLAB','USERDEFINED','NOTDEFINED'],
+  IFCCOLUMN:            ['COLUMN','PILASTER','USERDEFINED','NOTDEFINED'],
+  IFCBEAM:              ['BEAM','JOIST','LINTEL','T_BEAM','USERDEFINED','NOTDEFINED'],
+  IFCMEMBER:            ['BEAM','CABLE','COLUMN','PLATE','POST','PURLIN','RAFTER','STRINGER','STRUT','STUD','USERDEFINED','NOTDEFINED'],
+  IFCWINDOW:            ['WINDOW','SKYLIGHT','LIGHTDOME','USERDEFINED','NOTDEFINED'],
+  IFCDOOR:              ['DOOR','GATE','TRAPDOOR','USERDEFINED','NOTDEFINED'],
+  IFCSTAIR:             ['STRAIGHT_RUN_STAIR','TWO_STRAIGHT_RUN_STAIR','QUARTER_TURN_STAIR','TWO_QUARTER_TURN_STAIR','HALF_TURN_STAIR','SPIRAL_STAIR','USERDEFINED','NOTDEFINED'],
+  IFCRAMP:              ['STRAIGHT_RUN_RAMP','TWO_STRAIGHT_RUN_RAMP','QUARTER_TURN_RAMP','HALF_TURN_RAMP','SPIRAL_RAMP','USERDEFINED','NOTDEFINED'],
+  IFCROOF:              ['FLAT_ROOF','SHED_ROOF','GABLE_ROOF','HIP_ROOF','GAMBREL_ROOF','MANSARD_ROOF','BARREL_ROOF','BUTTERFLY_ROOF','USERDEFINED','NOTDEFINED'],
+  IFCRAILING:           ['BALUSTRADE','GUARDRAIL','HANDRAIL','LADDER','USERDEFINED','NOTDEFINED'],
+  IFCCOVERING:          ['CEILING','CLADDING','FLOORING','INSULATION','MEMBRANE','ROOFING','SKIRTINGBOARD','WRAPPING','USERDEFINED','NOTDEFINED'],
+  IFCFOOTING:           ['CAISSON_FOUNDATION','FOOTING_BEAM','PAD_FOOTING','PILE_CAP','STRIP_FOOTING','USERDEFINED','NOTDEFINED'],
+  IFCPILE:              ['BORED','DRIVEN','JETGROUTING','USERDEFINED','NOTDEFINED'],
+  IFCGEOGRAPHICELEMENT: ['TERRAIN','USERDEFINED','NOTDEFINED'],
+  IFCBUILDINGELEMENTPROXY: ['COMPLEX','ELEMENT','PARTIAL','USERDEFINED','NOTDEFINED'],
+  IFCSHADINGDEVICE:     ['AWNING','JALOUSIE','SHUTTER','USERDEFINED','NOTDEFINED'],
+};
+
+const PARTOF_RELATIONS = [
+  'IFCRELAGGREGATES',
+  'IFCRELCONTAINEDINSPATIALSTRUCTURE',
+  'IFCRELASSIGNSTOGROUP',
+  'IFCRELASSEMBLESCOMPONENTS',
+  'IFCRELASSIGNSTOPRODUCT',
+];
+
+const STANDARD_PSETS = [
+  'Pset_WallCommon','Pset_SlabCommon','Pset_ColumnCommon','Pset_BeamCommon',
+  'Pset_MemberCommon','Pset_PlateCommon','Pset_FootingCommon','Pset_PileCommon',
+  'Pset_RoofCommon','Pset_CurtainWallCommon','Pset_WindowCommon','Pset_DoorCommon',
+  'Pset_StairCommon','Pset_StairFlightCommon','Pset_RampCommon','Pset_RampFlightCommon',
+  'Pset_RailingCommon','Pset_ShadingDeviceCommon','Pset_CoveringCommon',
+  'Pset_BuildingCommon','Pset_SiteCommon','Pset_BuildingStoreyCommon',
+  'Pset_BuildingElementProxyCommon','Pset_SpaceCommon',
+  'Pset_FurnishingElementCommon','Pset_GeographicElementCommon','Pset_CivilElementCommon',
+  'Pset_ProjectCommon','Pset_Address','Pset_LandRegistration',
+  'Qto_WallBaseQuantities','Qto_SlabBaseQuantities','Qto_ColumnBaseQuantities',
+  'Qto_BeamBaseQuantities','Qto_BuildingStoreyBaseQuantities',
+];
+
+const COMMON_PROPS = {
+  'Pset_WallCommon':     ['IsExternal','Status','ThermalTransmittance','FireRating','LoadBearing','Compartmentation','AcousticRating','ExtendToStructure'],
+  'Pset_SlabCommon':     ['IsExternal','Status','ThermalTransmittance','FireRating','LoadBearing','AcousticRating'],
+  'Pset_ColumnCommon':   ['IsExternal','Status','FireRating','LoadBearing'],
+  'Pset_BeamCommon':     ['IsExternal','Status','FireRating','LoadBearing','Span','Slope'],
+  'Pset_MemberCommon':   ['IsExternal','Status','FireRating','LoadBearing'],
+  'Pset_PlateCommon':    ['IsExternal','Status','FireRating'],
+  'Pset_FootingCommon':  ['IsExternal','Status','LoadBearing'],
+  'Pset_PileCommon':     ['IsExternal','Status','LoadBearing'],
+  'Pset_RoofCommon':     ['IsExternal','Status','ThermalTransmittance','FireRating'],
+  'Pset_CurtainWallCommon': ['IsExternal','Status','ThermalTransmittance','AcousticRating','FireRating'],
+  'Pset_WindowCommon':   ['IsExternal','Status','ThermalTransmittance','AcousticRating','FireExit','SecurityRating'],
+  'Pset_DoorCommon':     ['IsExternal','Status','FireExit','DurabilityRating','AcousticRating','ThermalTransmittance'],
+  'Pset_StairCommon':    ['IsExternal','Status','FireExit','HandicapAccessible','RequiredHeadroom'],
+  'Pset_StairFlightCommon': ['NumberOfRiser','NumberOfTreads','RiserHeight','TreadLength','Status'],
+  'Pset_RampCommon':     ['IsExternal','Status','FireExit','HandicapAccessible'],
+  'Pset_RailingCommon':  ['IsExternal','Status'],
+  'Pset_CoveringCommon': ['IsExternal','Status','ThermalTransmittance','AcousticRating','FlammabilityRating'],
+  'Pset_BuildingCommon': ['BuildingID','OccupancyType','YearOfConstruction','NumberOfStoreys','IsLandmarked'],
+  'Pset_SiteCommon':     ['BuildableArea','TotalArea','TotalHeight','LandTitleNumber'],
+  'Pset_BuildingStoreyCommon': ['AboveGround','EntranceLevel','GrossAreaWorking','NetAreaWorking'],
+  'Pset_SpaceCommon':    ['IsExternal','Reference','Category','GrossPlannedArea','NetPlannedArea','OccupancyType'],
+};
+
+const DATA_TYPES = [
+  'IFCLABEL','IFCTEXT','IFCIDENTIFIER','IFCBOOLEAN',
+  'IFCINTEGER','IFCREAL','IFCLENGTHMEASURE','IFCPOSITIVELENGTHMEASURE',
+  'IFCAREAMEASURE','IFCVOLUMEMEASURE','IFCMASSMEASURE',
+  'IFCTHERMALTRANSMITTANCEMEASURE','IFCTHERMALRESISTANCEMEASURE',
+  'IFCPOSITIVEPLANEANGLEMEASURE','IFCMONETARYMEASURE',
+];
+
+const ATTRIBUTE_NAMES = [
+  'GlobalId','Name','Description','ObjectType','Tag','LongName',
+  'PredefinedType','CompositionType','ElevationWithFlooring','ElevationOfRefHeight',
+  'OverallHeight','OverallWidth',
+];
+
+const FACET_ICONS = {
+  entity: '◈', attribute: '⊞', property: '◉',
+  classification: '◆', material: '◎', partof: '⊂',
+};
+
+const FACET_LABELS = {
+  entity: 'Entity', attribute: 'Attribut', property: 'Property',
+  classification: 'Klassifikation', material: 'Material', partof: 'PartOf',
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   IDS VERSION CONFIG
+   Steuert welche Features je IDS-Version verfügbar sind.
+   Vorbereitet für zukünftige Erweiterungen.
+══════════════════════════════════════════════════════════════════ */
+const IDS_VERSION_CONFIG = {
+  '1.0': {
+    facets: ['entity','attribute','property','classification','material','partof'],
+    valueTypes: ['none','simple','enumeration','pattern','bounds','length'],
+    schemaUrl: 'http://standards.buildingsmart.org/IDS/1.0/ids.xsd',
+  },
+  // Zukünftige Versionen hier ergänzen, z.B.:
+  // '2.0': { facets: [...], valueTypes: [...], schemaUrl: '...' }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════════ */
+let state = {
+  specs: [],
+  editIdx: -1,
+  editSpec: null,
+  globalIfcVersion: 'IFC4',
+  idsVersion: '1.0',
+};
+
+function newSpec() {
+  return {
+    name:'', identifier:'', description:'', instructions:'',
+    ifcVersion: [state.globalIfcVersion],
+    minOccurs: 0, maxOccurs: 'unbounded',
+    applicability:[], requirements:[],
+  };
+}
+
+function newFacet(type) {
+  const base = { type, _open: true, instructions: '' };
+  if (type === 'entity')         return {...base, name:'', predefinedType:''};
+  if (type === 'attribute')      return {...base, name:'', value:null, cardinality:'required'};
+  if (type === 'property')       return {...base, propertySet:'', baseName:'', dataType:'IFCLABEL', value:null, uri:'', cardinality:'required'};
+  if (type === 'classification') return {...base, system:'', value:null, uri:'', cardinality:'required'};
+  if (type === 'material')       return {...base, value:null, uri:'', cardinality:'required'};
+  if (type === 'partof')         return {...base, name:'', predefinedType:'', relation:'IFCRELAGGREGATES', cardinality:'required'};
+  return base;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   XML GENERATION
+══════════════════════════════════════════════════════════════════ */
+function esc(s) {
+  if (!s && s !== 0) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function valueXml(val, indent) {
+  if (!val) return '';
+
+  if (val.type === 'simple') {
+    if (!val.value && val.value !== 0) return '';
+    return `${indent}<ids:value><ids:simpleValue>${esc(val.value)}</ids:simpleValue></ids:value>\n`;
+  }
+
+  if (val.type === 'enumeration') {
+    const items = (val.values || []).filter(v => v.trim());
+    if (!items.length) return '';
+    let x = `${indent}<ids:value>\n${indent}  <xs:restriction base="xs:string">\n`;
+    for (const v of items) x += `${indent}    <xs:enumeration value="${esc(v)}"/>\n`;
+    return x + `${indent}  </xs:restriction>\n${indent}</ids:value>\n`;
+  }
+
+  if (val.type === 'pattern') {
+    if (!val.pattern) return '';
+    return `${indent}<ids:value>\n${indent}  <xs:restriction base="xs:string">\n${indent}    <xs:pattern value="${esc(val.pattern)}"/>\n${indent}  </xs:restriction>\n${indent}</ids:value>\n`;
+  }
+
+  if (val.type === 'bounds') {
+    const has = val.minInclusive!=='' || val.maxInclusive!=='' || val.minExclusive!=='' || val.maxExclusive!=='';
+    if (!has) return '';
+    let x = `${indent}<ids:value>\n${indent}  <xs:restriction base="xs:decimal">\n`;
+    if (val.minInclusive !== '') x += `${indent}    <xs:minInclusive value="${esc(val.minInclusive)}"/>\n`;
+    if (val.maxInclusive !== '') x += `${indent}    <xs:maxInclusive value="${esc(val.maxInclusive)}"/>\n`;
+    if (val.minExclusive !== '') x += `${indent}    <xs:minExclusive value="${esc(val.minExclusive)}"/>\n`;
+    if (val.maxExclusive !== '') x += `${indent}    <xs:maxExclusive value="${esc(val.maxExclusive)}"/>\n`;
+    return x + `${indent}  </xs:restriction>\n${indent}</ids:value>\n`;
+  }
+
+  if (val.type === 'length') {
+    const has = val.length!=='' || val.minLength!=='' || val.maxLength!=='';
+    if (!has) return '';
+    let x = `${indent}<ids:value>\n${indent}  <xs:restriction base="xs:string">\n`;
+    if (val.length    !== '') x += `${indent}    <xs:length value="${esc(val.length)}"/>\n`;
+    if (val.minLength !== '') x += `${indent}    <xs:minLength value="${esc(val.minLength)}"/>\n`;
+    if (val.maxLength !== '') x += `${indent}    <xs:maxLength value="${esc(val.maxLength)}"/>\n`;
+    return x + `${indent}  </xs:restriction>\n${indent}</ids:value>\n`;
+  }
+  return '';
+}
+
+function entityNameXml(nameStr, tag, indent) {
+  if (!nameStr) return '';
+  const ii = indent + '  ';
+  const parts = nameStr.split('|').map(s=>s.trim()).filter(Boolean);
+  let x = `${indent}<${tag}>\n`;
+  if (parts.length === 1) {
+    x += `${ii}<ids:simpleValue>${esc(parts[0])}</ids:simpleValue>\n`;
+  } else {
+    x += `${ii}<xs:restriction base="xs:string">\n`;
+    for (const p of parts) x += `${ii}  <xs:enumeration value="${esc(p)}"/>\n`;
+    x += `${ii}</xs:restriction>\n`;
+  }
+  return x + `${indent}</${tag}>\n`;
+}
+
+function facetXml(f, inReq, indent) {
+  const ii  = indent + '  ';
+  const card = (inReq && f.cardinality) ? ` cardinality="${f.cardinality}"` : '';
+  const instr = f.instructions ? ` instructions="${esc(f.instructions)}"` : '';
+
+  if (f.type === 'entity') {
+    let x = `${indent}<ids:entity${instr}>\n`;
+    x += entityNameXml(f.name, 'ids:name', ii);
+    if (f.predefinedType) x += entityNameXml(f.predefinedType, 'ids:predefinedType', ii);
+    return x + `${indent}</ids:entity>\n`;
+  }
+
+  if (f.type === 'attribute') {
+    let x = `${indent}<ids:attribute${card}${instr}>\n`;
+    x += `${ii}<ids:name><ids:simpleValue>${esc(f.name)}</ids:simpleValue></ids:name>\n`;
+    x += valueXml(f.value, ii);
+    return x + `${indent}</ids:attribute>\n`;
+  }
+
+  if (f.type === 'property') {
+    const dt  = f.dataType ? ` dataType="${f.dataType}"` : '';
+    const uri = f.uri ? ` uri="${esc(f.uri)}"` : '';
+    let x = `${indent}<ids:property${dt}${uri}${card}${instr}>\n`;
+    x += `${ii}<ids:propertySet><ids:simpleValue>${esc(f.propertySet)}</ids:simpleValue></ids:propertySet>\n`;
+    x += `${ii}<ids:baseName><ids:simpleValue>${esc(f.baseName)}</ids:simpleValue></ids:baseName>\n`;
+    x += valueXml(f.value, ii);
+    return x + `${indent}</ids:property>\n`;
+  }
+
+  if (f.type === 'classification') {
+    const uri = f.uri ? ` uri="${esc(f.uri)}"` : '';
+    let x = `${indent}<ids:classification${uri}${card}${instr}>\n`;
+    if (f.system) x += `${ii}<ids:system><ids:simpleValue>${esc(f.system)}</ids:simpleValue></ids:system>\n`;
+    x += valueXml(f.value, ii);
+    return x + `${indent}</ids:classification>\n`;
+  }
+
+  if (f.type === 'material') {
+    const uri = f.uri ? ` uri="${esc(f.uri)}"` : '';
+    let x = `${indent}<ids:material${uri}${card}${instr}>\n`;
+    x += valueXml(f.value, ii);
+    return x + `${indent}</ids:material>\n`;
+  }
+
+  if (f.type === 'partof') {
+    const rel = f.relation ? ` relation="${f.relation}"` : '';
+    let x = `${indent}<ids:partOf${rel}${card}${instr}>\n`;
+    if (f.name || f.predefinedType) {
+      x += `${ii}<ids:entity>\n`;
+      x += entityNameXml(f.name, 'ids:name', ii + '  ');
+      if (f.predefinedType) x += entityNameXml(f.predefinedType, 'ids:predefinedType', ii + '  ');
+      x += `${ii}</ids:entity>\n`;
+    }
+    return x + `${indent}</ids:partOf>\n`;
+  }
+  return '';
+}
+
+function generateXML() {
+  const m = getMeta();
+  const cfg = IDS_VERSION_CONFIG[state.idsVersion] || IDS_VERSION_CONFIG['1.0'];
+  let x = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n`;
+  x += `<ids:ids xmlns:xs="http://www.w3.org/2001/XMLSchema"\n`;
+  x += `         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n`;
+  x += `         xsi:schemaLocation="http://standards.buildingsmart.org/IDS ${cfg.schemaUrl}"\n`;
+  x += `         xmlns:ids="http://standards.buildingsmart.org/IDS">\n\n`;
+  x += `  <ids:info>\n`;
+  x += `    <ids:title>${esc(m.title||'Untitled')}</ids:title>\n`;
+  if (m.copyright)   x += `    <ids:copyright>${esc(m.copyright)}</ids:copyright>\n`;
+  if (m.version)     x += `    <ids:version>${esc(m.version)}</ids:version>\n`;
+  if (m.description) x += `    <ids:description>${esc(m.description)}</ids:description>\n`;
+  if (m.author)      x += `    <ids:author>${esc(m.author)}</ids:author>\n`;
+  if (m.date)        x += `    <ids:date>${esc(m.date)}</ids:date>\n`;
+  if (m.purpose)     x += `    <ids:purpose>${esc(m.purpose)}</ids:purpose>\n`;
+  if (m.milestone)   x += `    <ids:milestone>${esc(m.milestone)}</ids:milestone>\n`;
+  x += `  </ids:info>\n\n  <ids:specifications>\n\n`;
+
+  for (const s of state.specs) {
+    // IFC version sits on the spec per IDS standard, but is globally inherited
+    const iv = state.globalIfcVersion;
+    let attrs = `name="${esc(s.name)}" ifcVersion="${iv}"`;
+    if (s.identifier)   attrs += ` identifier="${esc(s.identifier)}"`;
+    if (s.description)  attrs += `\n      description="${esc(s.description)}"`;
+    if (s.instructions) attrs += `\n      instructions="${esc(s.instructions)}"`;
+    x += `    <ids:specification ${attrs}>\n`;
+    x += `      <ids:applicability minOccurs="${s.minOccurs??0}" maxOccurs="${s.maxOccurs||'unbounded'}">\n`;
+    for (const f of s.applicability) x += facetXml(f, false, '        ');
+    x += `      </ids:applicability>\n      <ids:requirements>\n`;
+    for (const f of s.requirements) x += facetXml(f, true, '        ');
+    x += `      </ids:requirements>\n    </ids:specification>\n\n`;
+  }
+  return x + `  </ids:specifications>\n\n</ids:ids>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   XML IMPORT
+══════════════════════════════════════════════════════════════════ */
+function importXML(xmlStr) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'text/xml');
+    if (doc.querySelector('parsererror')) throw new Error('XML Parse-Fehler');
+    const ns = 'http://standards.buildingsmart.org/IDS';
+    const xsns = 'http://www.w3.org/2001/XMLSchema';
+
+    function q(el, tag) { return el.getElementsByTagNameNS(ns, tag); }
+    function attr(el, a) { return el.getAttribute(a)||''; }
+    function g(tag) { const e = doc.getElementsByTagNameNS(ns,tag)[0]; return e ? e.textContent.trim() : ''; }
+
+    document.getElementById('meta-title').value       = g('title');
+    document.getElementById('meta-description').value = g('description');
+    document.getElementById('meta-version').value     = g('version');
+    document.getElementById('meta-date').value        = g('date');
+    document.getElementById('meta-author').value      = g('author');
+    document.getElementById('meta-copyright').value   = g('copyright');
+    document.getElementById('meta-purpose').value     = g('purpose');
+    document.getElementById('meta-milestone').value   = g('milestone');
+
+    function parseEntityName(el) {
+      if (!el) return '';
+      const sv = q(el,'simpleValue')[0];
+      if (sv) return sv.textContent.trim();
+      return Array.from(el.getElementsByTagNameNS(xsns,'enumeration'))
+        .map(e=>e.getAttribute('value')).join('|');
+    }
+
+    function parseValue(el) {
+      if (!el) return null;
+      const sv = q(el,'simpleValue')[0];
+      if (sv) return { type:'simple', value: sv.textContent.trim() };
+      const rest = el.getElementsByTagNameNS(xsns,'restriction')[0];
+      if (!rest) return null;
+      const enums = Array.from(rest.getElementsByTagNameNS(xsns,'enumeration')).map(e=>e.getAttribute('value'));
+      if (enums.length) return { type:'enumeration', values: enums };
+      const pat = rest.getElementsByTagNameNS(xsns,'pattern')[0];
+      if (pat) return { type:'pattern', pattern: pat.getAttribute('value') };
+      const minI = rest.getElementsByTagNameNS(xsns,'minInclusive')[0];
+      const maxI = rest.getElementsByTagNameNS(xsns,'maxInclusive')[0];
+      const minE = rest.getElementsByTagNameNS(xsns,'minExclusive')[0];
+      const maxE = rest.getElementsByTagNameNS(xsns,'maxExclusive')[0];
+      if (minI||maxI||minE||maxE) return {
+        type:'bounds',
+        minInclusive: minI ? minI.getAttribute('value') : '',
+        maxInclusive: maxI ? maxI.getAttribute('value') : '',
+        minExclusive: minE ? minE.getAttribute('value') : '',
+        maxExclusive: maxE ? maxE.getAttribute('value') : '',
+      };
+      const len  = rest.getElementsByTagNameNS(xsns,'length')[0];
+      const minL = rest.getElementsByTagNameNS(xsns,'minLength')[0];
+      const maxL = rest.getElementsByTagNameNS(xsns,'maxLength')[0];
+      if (len||minL||maxL) return {
+        type:'length',
+        length:    len  ? len.getAttribute('value')  : '',
+        minLength: minL ? minL.getAttribute('value') : '',
+        maxLength: maxL ? maxL.getAttribute('value') : '',
+      };
+      return null;
+    }
+
+    function parseFacet(el) {
+      const tag  = el.localName;
+      const instr = attr(el,'instructions');
+      if (tag === 'entity') {
+        return { type:'entity', _open:false, instructions:instr,
+          name: parseEntityName(q(el,'name')[0]),
+          predefinedType: parseEntityName(q(el,'predefinedType')[0]),
+        };
+      }
+      if (tag === 'attribute') {
+        const nameEl = q(el,'name')[0];
+        return { type:'attribute', _open:false, instructions:instr,
+          cardinality: attr(el,'cardinality')||'required',
+          name: nameEl ? (q(nameEl,'simpleValue')[0]||{}).textContent||'' : '',
+          value: parseValue(q(el,'value')[0]),
+        };
+      }
+      if (tag === 'property') {
+        const pset = q(el,'propertySet')[0];
+        const bn   = q(el,'baseName')[0];
+        return { type:'property', _open:false, instructions:instr,
+          cardinality: attr(el,'cardinality')||'required',
+          dataType: attr(el,'dataType'), uri: attr(el,'uri'),
+          propertySet: pset ? (q(pset,'simpleValue')[0]||{}).textContent||'' : '',
+          baseName:    bn   ? (q(bn,  'simpleValue')[0]||{}).textContent||'' : '',
+          value: parseValue(q(el,'value')[0]),
+        };
+      }
+      if (tag === 'classification') {
+        const sys = q(el,'system')[0];
+        return { type:'classification', _open:false, instructions:instr,
+          cardinality: attr(el,'cardinality')||'required', uri: attr(el,'uri'),
+          system: sys ? (q(sys,'simpleValue')[0]||{}).textContent||'' : '',
+          value: parseValue(q(el,'value')[0]),
+        };
+      }
+      if (tag === 'material') {
+        return { type:'material', _open:false, instructions:instr,
+          cardinality: attr(el,'cardinality')||'required', uri: attr(el,'uri'),
+          value: parseValue(q(el,'value')[0]),
+        };
+      }
+      if (tag === 'partOf') {
+        const entEl = q(el,'entity')[0];
+        return { type:'partof', _open:false, instructions:instr,
+          cardinality: attr(el,'cardinality')||'required',
+          relation: attr(el,'relation')||'IFCRELAGGREGATES',
+          name:          entEl ? parseEntityName(q(entEl,'name')[0])          : '',
+          predefinedType:entEl ? parseEntityName(q(entEl,'predefinedType')[0]): '',
+        };
+      }
+      return null;
+    }
+
+    function parseFacets(clauseEl) {
+      const result = [];
+      for (const child of clauseEl.children) {
+        const f = parseFacet(child);
+        if (f) result.push(f);
+      }
+      return result;
+    }
+
+    const specs = [];
+    let detectedIfcVersion = null;
+    let mixedVersions = false;
+
+    for (const specEl of doc.getElementsByTagNameNS(ns,'specification')) {
+      const ivRaw = (attr(specEl,'ifcVersion')||'IFC4').split(/\s+/).filter(Boolean);
+      const ivFirst = ivRaw[0] || 'IFC4';
+
+      // Detect global IFC version from first spec; warn if mixed
+      if (!detectedIfcVersion) {
+        detectedIfcVersion = ivFirst;
+      } else if (detectedIfcVersion !== ivFirst) {
+        mixedVersions = true;
+      }
+
+      const appEl = specEl.getElementsByTagNameNS(ns,'applicability')[0];
+      const reqEl = specEl.getElementsByTagNameNS(ns,'requirements')[0];
+      specs.push({
+        name: attr(specEl,'name'), identifier: attr(specEl,'identifier'),
+        description: attr(specEl,'description'), instructions: attr(specEl,'instructions'),
+        ifcVersion: ivRaw,
+        minOccurs: appEl ? attr(appEl,'minOccurs')||0 : 0,
+        maxOccurs: appEl ? attr(appEl,'maxOccurs')||'unbounded' : 'unbounded',
+        applicability: appEl ? parseFacets(appEl) : [],
+        requirements:  reqEl ? parseFacets(reqEl) : [],
+      });
+    }
+
+    state.specs = specs;
+
+    // Update global IFC version
+    if (detectedIfcVersion) {
+      state.globalIfcVersion = detectedIfcVersion;
+      document.getElementById('meta-ifc-version').value = detectedIfcVersion;
+    }
+
+    renderSpecList();
+    let msg = `✓ ${specs.length} Spezifikation(en) importiert`;
+    if (mixedVersions) msg += ' (Achtung: gemischte IFC-Versionen – erste Version übernommen)';
+    showToast(msg, mixedVersions);
+  } catch(e) {
+    showToast('Import-Fehler: ' + e.message, true);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════════════════════════ */
+function getMeta() {
+  return {
+    title:          document.getElementById('meta-title').value,
+    description:    document.getElementById('meta-description').value,
+    version:        document.getElementById('meta-version').value,
+    date:           document.getElementById('meta-date').value,
+    author:         document.getElementById('meta-author').value,
+    copyright:      document.getElementById('meta-copyright').value,
+    purpose:        document.getElementById('meta-purpose').value,
+    milestone:      document.getElementById('meta-milestone').value,
+    idsVersion:     document.getElementById('meta-ids-version').value,
+    globalIfcVersion: document.getElementById('meta-ifc-version').value,
+  };
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#dc2626' : '#1e293b';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   OCCURS PRESETS
+══════════════════════════════════════════════════════════════════ */
+const OCC_PRESETS = {
+  'occ-arbitrary': { min: '0',  max: 'unbounded' },
+  'occ-atleast':   { min: '1',  max: 'unbounded' },
+  'occ-exact':     { min: '1',  max: '1' },
+};
+
+function setOccursPreset(presetId) {
+  document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(presetId)?.classList.add('active');
+  const customRow = document.getElementById('occ-custom-row');
+  if (presetId === 'occ-custom') {
+    customRow.style.display = 'flex';
+    if (!document.getElementById('spec-min').value) document.getElementById('spec-min').value = '0';
+    if (!document.getElementById('spec-max').value) document.getElementById('spec-max').value = 'unbounded';
+  } else {
+    customRow.style.display = 'none';
+    const p = OCC_PRESETS[presetId];
+    if (p) {
+      document.getElementById('spec-min').value = p.min;
+      document.getElementById('spec-max').value = p.max;
+    }
+  }
+}
+
+function setOccursPresetByValues(min, max) {
+  const m = String(min ?? '0');
+  const x = String(max ?? 'unbounded');
+  let id = 'occ-custom';
+  if      (m === '0' && x === 'unbounded') id = 'occ-arbitrary';
+  else if (m === '1' && x === 'unbounded') id = 'occ-atleast';
+  else if (m === '1' && x === '1')         id = 'occ-exact';
+
+  document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+
+  document.getElementById('spec-min').value = m;
+  document.getElementById('spec-max').value = x;
+  const customRow = document.getElementById('occ-custom-row');
+  customRow.style.display = (id === 'occ-custom') ? 'flex' : 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SPEC LIST
+══════════════════════════════════════════════════════════════════ */
+function facetSummary(f) {
+  if (f.type === 'entity')         return f.name + (f.predefinedType ? ' / '+f.predefinedType : '');
+  if (f.type === 'attribute')      return f.name;
+  if (f.type === 'property')       return (f.propertySet ? f.propertySet+'.' : '') + f.baseName;
+  if (f.type === 'classification') return (f.system ? f.system+' ' : '') + (f.value?.type==='simple' ? f.value.value : '');
+  if (f.type === 'material')       return f.value?.type==='simple' ? f.value.value : (f.value?.values?.[0] ? f.value.values[0]+'…' : '');
+  if (f.type === 'partof')         return (f.relation||'') + (f.name ? ' → '+f.name : '');
+  return '';
+}
+
+function renderSpecList() {
+  const container = document.getElementById('specs-list');
+  document.getElementById('spec-count').textContent = `(${state.specs.length})`;
+  if (!state.specs.length) {
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--c-muted)">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+      <div style="font-size:15px;font-weight:600;margin-bottom:4px">Noch keine Spezifikationen</div>
+      <div style="font-size:13px">Klicke auf «Neue Spezifikation» um zu beginnen.</div></div>`;
+    return;
+  }
+  container.innerHTML = state.specs.map((s,i) => {
+    const pills = arr => arr.map(f => `<span class="facet-pill fp-${f.type}">${FACET_ICONS[f.type]} ${esc(facetSummary(f))}</span>`).join('');
+    return `<div class="spec-card">
+      <div class="spec-card-header" onclick="toggleCard(${i})">
+        <div class="spec-index">${i+1}</div>
+        <div class="spec-title">
+          <div class="spec-name">${esc(s.name)||'<em style="color:var(--c-muted)">Ohne Titel</em>'}</div>
+          <div class="spec-meta">${s.identifier?s.identifier+' · ':''}${s.applicability.length} Applicability · ${s.requirements.length} Requirements</div>
+        </div>
+        <div class="spec-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-icon" onclick="editSpec(${i})" title="Bearbeiten">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn btn-ghost btn-icon" onclick="duplicateSpec(${i})" title="Duplizieren">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="btn btn-ghost btn-icon" style="color:var(--c-danger)" onclick="deleteSpec(${i})" title="Löschen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="spec-card-body" id="card-body-${i}">
+        <div class="spec-facets-preview">
+          <div><div class="facet-col-label">Applicability</div><div class="tag-row">${pills(s.applicability)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
+          <div><div class="facet-col-label">Requirements</div><div class="tag-row">${pills(s.requirements)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
+        </div>
+        ${s.description?`<p style="margin-top:8px;font-size:12px;color:var(--c-muted)">${esc(s.description)}</p>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCard(i)     { const b = document.getElementById('card-body-'+i); if(b) b.classList.toggle('open'); }
+function deleteSpec(i)     { if(!confirm(`«${state.specs[i].name}» löschen?`)) return; state.specs.splice(i,1); renderSpecList(); showToast('Gelöscht'); }
+function duplicateSpec(i)  { const c=JSON.parse(JSON.stringify(state.specs[i])); c.name+=' (Kopie)'; state.specs.splice(i+1,0,c); renderSpecList(); showToast('Dupliziert'); }
+function editSpec(i)       { openSpecModal(i); }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPEC EDITOR MODAL
+══════════════════════════════════════════════════════════════════ */
+function openSpecModal(idx) {
+  state.editIdx = idx;
+  state.editSpec = idx === -1 ? newSpec() : JSON.parse(JSON.stringify(state.specs[idx]));
+  document.getElementById('modal-title').textContent = idx === -1 ? 'Neue Spezifikation' : 'Spezifikation bearbeiten';
+  document.getElementById('spec-name').value         = state.editSpec.name;
+  document.getElementById('spec-identifier').value   = state.editSpec.identifier||'';
+  document.getElementById('spec-description').value  = state.editSpec.description||'';
+  document.getElementById('spec-instructions').value = state.editSpec.instructions||'';
+
+  // Show global IFC version in modal hint
+  document.getElementById('modal-ifc-hint').textContent = state.globalIfcVersion;
+
+  // Set occurs presets
+  setOccursPresetByValues(state.editSpec.minOccurs, state.editSpec.maxOccurs);
+
+  renderFacetList('app');
+  renderFacetList('req');
+  updateEntityDropdown();
+  document.getElementById('spec-modal').classList.add('open');
+}
+
+function closeSpecModal() {
+  document.getElementById('spec-modal').classList.remove('open');
+  state.editSpec = null;
+}
+
+function saveSpec() {
+  const name = document.getElementById('spec-name').value.trim();
+  if (!name) { showToast('Name ist erforderlich', true); return; }
+
+  state.editSpec.name         = name;
+  state.editSpec.identifier   = document.getElementById('spec-identifier').value.trim();
+  state.editSpec.description  = document.getElementById('spec-description').value.trim();
+  state.editSpec.instructions = document.getElementById('spec-instructions').value.trim();
+  // IFC version is global — stored per-spec for XML compliance
+  state.editSpec.ifcVersion   = [state.globalIfcVersion];
+  state.editSpec.minOccurs    = document.getElementById('spec-min').value;
+  state.editSpec.maxOccurs    = document.getElementById('spec-max').value || 'unbounded';
+
+  // Duplicate warnings (non-blocking)
+  const dupWarnings = checkDuplicateFacets(state.editSpec);
+  if (dupWarnings.length) {
+    showToast('⚠ Duplikate: ' + dupWarnings.join(', '), true);
+    // Still save — just warn
+  }
+
+  if (state.editIdx === -1) state.specs.push(state.editSpec);
+  else state.specs[state.editIdx] = state.editSpec;
+  closeSpecModal();
+  renderSpecList();
+  if (!dupWarnings.length)
+    showToast(state.editIdx === -1 ? '✓ Spezifikation hinzugefügt' : '✓ Gespeichert');
+}
+
+/* Check for duplicate facets within applicability and requirements */
+function checkDuplicateFacets(spec) {
+  const warnings = [];
+
+  function check(facets, section) {
+    const attrNames  = [];
+    const propKeys   = [];
+    const partRelns  = [];
+    for (const f of facets) {
+      if (f.type === 'attribute' && f.name) {
+        if (attrNames.includes(f.name)) warnings.push(`${section}: Attribut «${f.name}» mehrfach`);
+        else attrNames.push(f.name);
+      }
+      if (f.type === 'property' && f.propertySet && f.baseName) {
+        const k = f.propertySet + '.' + f.baseName;
+        if (propKeys.includes(k)) warnings.push(`${section}: Property «${k}» mehrfach`);
+        else propKeys.push(k);
+      }
+      if (f.type === 'partof' && f.relation) {
+        if (partRelns.includes(f.relation)) warnings.push(`${section}: PartOf «${f.relation}» mehrfach`);
+        else partRelns.push(f.relation);
+      }
+    }
+  }
+
+  check(spec.applicability, 'Applicability');
+  check(spec.requirements,  'Requirements');
+  return warnings;
+}
+
+/* Update Entity option in Applicability dropdown based on current facets */
+function updateEntityDropdown() {
+  if (!state.editSpec) return;
+  const sel = document.getElementById('app-facet-type');
+  const hasEntity = state.editSpec.applicability.some(f => f.type === 'entity');
+  Array.from(sel.options).forEach(opt => {
+    if (opt.value === 'entity') {
+      opt.disabled = hasEntity;
+      opt.text = hasEntity ? 'Entity (bereits vorhanden)' : 'Entity';
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FACET RENDERING
+══════════════════════════════════════════════════════════════════ */
+function renderFacetList(clause) {
+  const container = document.getElementById(clause==='app' ? 'app-facets' : 'req-facets');
+  const facets = clause==='app' ? state.editSpec.applicability : state.editSpec.requirements;
+  if (!facets.length) {
+    container.innerHTML = `<div class="facets-empty">Noch keine Facetten. Füge eine mit dem Dropdown unten hinzu.</div>`;
+    return;
+  }
+
+  // Render facet cards with AND connectors between them
+  const parts = [];
+  facets.forEach((f, i) => {
+    if (i > 0) {
+      parts.push(`<div class="and-connector"><span class="and-badge">UND</span></div>`);
+    }
+    parts.push(renderFacetCard(f, clause, i, clause==='req'));
+  });
+  container.innerHTML = parts.join('');
+}
+
+function renderFacetCard(f, clause, idx, inReq) {
+  const isOpen = f._open ? 'open' : '';
+  const sum = facetSummary(f);
+  return `<div class="facet-card" data-type="${f.type}" id="fc-${clause}-${idx}">
+    <div class="facet-card-header" onclick="toggleFacet('${clause}',${idx})">
+      <div class="facet-type-dot dot-${f.type}"></div>
+      <span class="facet-type-label tl-${f.type}">${FACET_LABELS[f.type]}</span>
+      <span class="facet-summary">${sum ? esc(sum) : '<em>konfigurieren…</em>'}</span>
+      <div style="display:flex;gap:2px;flex-shrink:0">
+        <button class="btn btn-ghost btn-icon" style="padding:2px 5px" onclick="event.stopPropagation();moveFacet('${clause}',${idx},-1)">↑</button>
+        <button class="btn btn-ghost btn-icon" style="padding:2px 5px" onclick="event.stopPropagation();moveFacet('${clause}',${idx},1)">↓</button>
+        <button class="btn btn-ghost btn-icon" style="padding:2px 5px;color:var(--c-danger)" onclick="event.stopPropagation();removeFacet('${clause}',${idx})">×</button>
+      </div>
+    </div>
+    <div class="facet-card-body ${isOpen}">${renderFacetForm(f, clause, idx, inReq)}</div>
+  </div>`;
+}
+
+function ff(label, html, full=false) {
+  return `<div class="form-group${full?' full':''}"><label>${label}</label>${html}</div>`;
+}
+
+function cardinalitySelect(current, clause, idx) {
+  return `<select onchange="updateFacet('${clause}',${idx},'cardinality',this.value)">
+    <option value="required"${current==='required'?' selected':''}>required</option>
+    <option value="optional"${current==='optional'?' selected':''}>optional</option>
+    <option value="prohibited"${current==='prohibited'?' selected':''}>prohibited</option>
+  </select>`;
+}
+
+function instrField(f, clause, idx) {
+  return `<div class="form-group full instr-group">
+    <label>Instructions (Hinweis für Modellierer)</label>
+    <input oninput="updateFacet('${clause}',${idx},'instructions',this.value)"
+      value="${esc(f.instructions||'')}" placeholder="Optionaler Freitext für den Modellierer" />
+  </div>`;
+}
+
+function renderFacetForm(f, clause, idx, inReq) {
+  const key = `${clause}-${idx}`;
+  let h = `<div class="facet-form-grid">`;
+
+  if (f.type === 'entity') {
+    const listId = `el-${key}`, ptList = `pt-${key}`;
+    const ent = (f.name||'').split('|')[0].trim();
+    h += ff('Entity Name',
+      `<input oninput="updateEntityName('${key}',this.value)" value="${esc(f.name)}" list="${listId}" placeholder="IFCWALL" style="text-transform:uppercase"/>
+      <datalist id="${listId}">${IFC_ENTITIES.map(e=>`<option value="${e}">`).join('')}</datalist>
+      <div style="font-size:11px;color:var(--c-muted);margin-top:3px">Mehrere mit | trennen</div>`);
+    h += ff('PredefinedType',
+      `<input oninput="updateFacet('${clause}',${idx},'predefinedType',this.value)" value="${esc(f.predefinedType)}" list="${ptList}" placeholder="Optional"/>
+      <datalist id="${ptList}">${(PREDEFINED_TYPES[ent]||[]).map(p=>`<option value="${p}">`).join('')}</datalist>
+      <div style="font-size:11px;color:var(--c-muted);margin-top:3px">Mehrere mit | trennen</div>`);
+    h += instrField(f, clause, idx);
+    return h + `</div>`;
+  }
+
+  if (f.type === 'attribute') {
+    const al = `al-${key}`;
+    h += ff('Attribut Name',
+      `<input oninput="updateFacet('${clause}',${idx},'name',this.value)" value="${esc(f.name)}" list="${al}" placeholder="z.B. Name, Tag"/>
+      <datalist id="${al}">${ATTRIBUTE_NAMES.map(a=>`<option value="${a}">`).join('')}</datalist>`, true);
+    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    h += instrField(f, clause, idx);
+    h += `</div><div style="margin-top:8px">${renderValueEditor(f.value, clause, idx)}</div>`;
+    return h;
+  }
+
+  if (f.type === 'property') {
+    const pl = `pl-${key}`, bnl = `bn-${key}`;
+    h += ff('Property Set',
+      `<input oninput="updateFacet('${clause}',${idx},'propertySet',this.value)" value="${esc(f.propertySet)}" list="${pl}" placeholder="z.B. Pset_WallCommon"/>
+      <datalist id="${pl}">${STANDARD_PSETS.map(p=>`<option value="${p}">`).join('')}</datalist>`);
+    h += ff('Property Name',
+      `<input oninput="updateFacetPropName('${clause}',${idx},this.value)" value="${esc(f.baseName)}" list="${bnl}" placeholder="z.B. IsExternal"/>
+      <datalist id="${bnl}">${getPropSuggestions(f.propertySet).map(p=>`<option value="${p}">`).join('')}</datalist>`);
+    h += ff('Datentyp',
+      `<select onchange="updateFacet('${clause}',${idx},'dataType',this.value)">${DATA_TYPES.map(d=>`<option value="${d}"${d===f.dataType?' selected':''}>${d}</option>`).join('')}</select>`);
+    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    h += ff('URI (optional)',
+      `<input oninput="updateFacet('${clause}',${idx},'uri',this.value)" value="${esc(f.uri||'')}" placeholder="https://identifier.buildingsmart.org/…"/>`, true);
+    h += instrField(f, clause, idx);
+    h += `</div><div style="margin-top:8px">${renderValueEditor(f.value, clause, idx)}</div>`;
+    return h;
+  }
+
+  if (f.type === 'classification') {
+    h += ff('System', `<input oninput="updateFacet('${clause}',${idx},'system',this.value)" value="${esc(f.system||'')}" placeholder="z.B. eBKP-H CRB:2020"/>`);
+    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    h += ff('URI (optional)', `<input oninput="updateFacet('${clause}',${idx},'uri',this.value)" value="${esc(f.uri||'')}" placeholder="URI optional"/>`, true);
+    h += instrField(f, clause, idx);
+    h += `</div><div style="margin-top:8px">${renderValueEditor(f.value, clause, idx)}</div>`;
+    return h;
+  }
+
+  if (f.type === 'material') {
+    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    h += ff('URI (optional)', `<input oninput="updateFacet('${clause}',${idx},'uri',this.value)" value="${esc(f.uri||'')}" placeholder="bSDD-URI des Materials"/>`, !inReq);
+    h += instrField(f, clause, idx);
+    h += `</div><div style="margin-top:8px">${renderValueEditor(f.value, clause, idx, 'Materialname')}</div>`;
+    return h;
+  }
+
+  if (f.type === 'partof') {
+    const relOpts = PARTOF_RELATIONS.map(r => `<option value="${r}"${r===f.relation?' selected':''}>${r}</option>`).join('');
+    const el2 = `el2-${key}`, pt2 = `pt2-${key}`;
+    const ent2 = (f.name||'').split('|')[0].trim();
+    h += ff('Relation <span style="color:var(--c-danger)">*</span>',
+      `<select onchange="updateFacet('${clause}',${idx},'relation',this.value)">${relOpts}</select>`, true);
+    h += ff('Übergeordnetes Entity',
+      `<input oninput="updateEntityName2('${clause}',${idx},this.value)" value="${esc(f.name)}" list="${el2}" placeholder="z.B. IFCBUILDINGSTOREY" style="text-transform:uppercase"/>
+      <datalist id="${el2}">${IFC_ENTITIES.map(e=>`<option value="${e}">`).join('')}</datalist>`);
+    h += ff('PredefinedType (übergeordnet)',
+      `<input oninput="updateFacet('${clause}',${idx},'predefinedType',this.value)" value="${esc(f.predefinedType||'')}" list="${pt2}" placeholder="Optional"/>
+      <datalist id="${pt2}">${(PREDEFINED_TYPES[ent2]||[]).map(p=>`<option value="${p}">`).join('')}</datalist>`);
+    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    h += instrField(f, clause, idx);
+    return h + `</div>`;
+  }
+
+  return h + `</div>`;
+}
+
+function getPropSuggestions(pset) {
+  return COMMON_PROPS[pset] || ['IsExternal','Status','Reference','LoadBearing','FireRating'];
+}
+
+/* ── Value Editor ──────────────────────────────────────────────── */
+function renderValueEditor(val, clause, idx, placeholder='Wert') {
+  const vt = val ? val.type : 'none';
+  const tabs = [
+    ['none',        'Kein Wert'],
+    ['simple',      'Einzelwert'],
+    ['enumeration', 'Aufzählung'],
+    ['pattern',     'Muster'],
+    ['bounds',      'Grenzen'],
+    ['length',      'Textlänge'],
+  ].map(([t,l]) => `<button class="value-tab${vt===t?' active':''}" onclick="setValueType('${clause}',${idx},'${t}')">${l}</button>`).join('');
+
+  let body = '';
+  if (vt === 'simple') {
+    body = `<div class="form-group" style="margin-top:6px"><label>Wert</label>
+      <input oninput="updateValueSimple('${clause}',${idx},this.value)" value="${esc(val?.value||'')}" placeholder="${placeholder}"/></div>`;
+  } else if (vt === 'enumeration') {
+    body = `<div style="margin-top:6px">
+      <label style="font-size:12px;font-weight:500;color:var(--c-muted);display:block;margin-bottom:4px">Erlaubte Werte (ein Wert pro Zeile)</label>
+      <textarea rows="${Math.max(3,(val?.values||['']).length+1)}"
+        oninput="updateValueEnum('${clause}',${idx},this.value)"
+        placeholder="NEW&#10;EXISTING&#10;DEMOLISH&#10;TEMPORARY"
+        style="width:100%;padding:7px 10px;border:1px solid var(--c-border);border-radius:6px;font-size:12px;font-family:inherit">${(val?.values||['']).join('\n')}</textarea></div>`;
+  } else if (vt === 'pattern') {
+    body = `<div class="form-group" style="margin-top:6px"><label>Regex-Muster</label>
+      <input oninput="updateValuePattern('${clause}',${idx},this.value)" value="${esc(val?.pattern||'')}" placeholder="z.B. REI\\d+" style="font-family:monospace"/></div>`;
+  } else if (vt === 'bounds') {
+    body = `<div style="margin-top:6px">
+      <div style="font-size:11px;color:var(--c-muted);margin-bottom:6px">Numerische Grenzen (xs:decimal) – leer lassen = keine Einschränkung</div>
+      <div class="bounds-grid">
+        <div class="form-group"><label>≥ minInclusive</label>
+          <input type="number" step="any" oninput="updateValueBounds('${clause}',${idx},'minInclusive',this.value)" value="${esc(val?.minInclusive??'')}" placeholder="0.2"/></div>
+        <div class="form-group"><label>≤ maxInclusive</label>
+          <input type="number" step="any" oninput="updateValueBounds('${clause}',${idx},'maxInclusive',this.value)" value="${esc(val?.maxInclusive??'')}" placeholder="0.5"/></div>
+        <div class="form-group"><label>&gt; minExclusive</label>
+          <input type="number" step="any" oninput="updateValueBounds('${clause}',${idx},'minExclusive',this.value)" value="${esc(val?.minExclusive??'')}" placeholder=""/></div>
+        <div class="form-group"><label>&lt; maxExclusive</label>
+          <input type="number" step="any" oninput="updateValueBounds('${clause}',${idx},'maxExclusive',this.value)" value="${esc(val?.maxExclusive??'')}" placeholder=""/></div>
+      </div></div>`;
+  } else if (vt === 'length') {
+    body = `<div style="margin-top:6px">
+      <div style="font-size:11px;color:var(--c-muted);margin-bottom:6px">Textlänge – leer lassen = keine Einschränkung</div>
+      <div class="form-row-3">
+        <div class="form-group"><label>Genau (length)</label>
+          <input type="number" min="0" oninput="updateValueLength('${clause}',${idx},'length',this.value)" value="${esc(val?.length??'')}" placeholder=""/></div>
+        <div class="form-group"><label>Min (minLength)</label>
+          <input type="number" min="0" oninput="updateValueLength('${clause}',${idx},'minLength',this.value)" value="${esc(val?.minLength??'')}" placeholder="3"/></div>
+        <div class="form-group"><label>Max (maxLength)</label>
+          <input type="number" min="0" oninput="updateValueLength('${clause}',${idx},'maxLength',this.value)" value="${esc(val?.maxLength??'')}" placeholder="20"/></div>
+      </div></div>`;
+  }
+
+  return `<div>
+    <div style="font-size:12px;font-weight:500;color:var(--c-muted);margin-bottom:6px">Wert-Einschränkung</div>
+    <div class="value-type-tabs">${tabs}</div>${body}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FACET MUTATIONS
+══════════════════════════════════════════════════════════════════ */
+function getFacetList(clause) {
+  return clause==='app' ? state.editSpec.applicability : state.editSpec.requirements;
+}
+
+function addFacet(clause) {
+  const sel = document.getElementById(clause==='app' ? 'app-facet-type' : 'req-facet-type');
+  const type = sel.value; if (!type) return; sel.value='';
+  const facets = getFacetList(clause);
+
+  // Entity max-1 check in Applicability
+  if (clause === 'app' && type === 'entity') {
+    if (facets.some(f => f.type === 'entity')) {
+      showToast('⚠ Nur eine Entity-Facette in Applicability erlaubt', true);
+      return;
+    }
+  }
+
+  facets.push(newFacet(type));
+  renderFacetList(clause);
+
+  // Update entity dropdown state after adding
+  if (clause === 'app') updateEntityDropdown();
+}
+
+function removeFacet(clause, idx) {
+  getFacetList(clause).splice(idx,1);
+  renderFacetList(clause);
+  if (clause === 'app') updateEntityDropdown();
+}
+
+function moveFacet(clause, idx, dir) {
+  const arr=getFacetList(clause), ni=idx+dir;
+  if(ni<0||ni>=arr.length) return;
+  [arr[idx],arr[ni]]=[arr[ni],arr[idx]]; renderFacetList(clause);
+}
+
+function toggleFacet(clause, idx) {
+  const f=getFacetList(clause)[idx]; f._open=!f._open;
+  const b=document.querySelector(`#fc-${clause}-${idx} .facet-card-body`);
+  if(b) b.classList.toggle('open',f._open);
+}
+
+function updateFacet(clause, idx, field, value) {
+  const f = getFacetList(clause)[idx]; f[field] = value;
+  const card = document.getElementById(`fc-${clause}-${idx}`);
+  if (card) { const s=card.querySelector('.facet-summary'); if(s) s.textContent=facetSummary(f)||'konfigurieren…'; }
+}
+
+function updateEntityName(key, value) {
+  const [clause, idx] = parseKey(key);
+  const f = getFacetList(clause)[idx];
+  f.name = value.toUpperCase();
+  const ent = value.split('|')[0].trim().toUpperCase();
+  const dl = document.getElementById(`pt-${key}`);
+  if (dl) dl.innerHTML = (PREDEFINED_TYPES[ent]||[]).map(p=>`<option value="${p}">`).join('');
+  const card = document.getElementById(`fc-${clause}-${idx}`);
+  if (card) { const s=card.querySelector('.facet-summary'); if(s) s.textContent=facetSummary(f)||'konfigurieren…'; }
+}
+
+function updateEntityName2(clause, idx, value) {
+  const f = getFacetList(clause)[idx]; f.name = value.toUpperCase();
+  const ent = value.split('|')[0].trim().toUpperCase();
+  const dl = document.getElementById(`pt2-${clause}-${idx}`);
+  if (dl) dl.innerHTML = (PREDEFINED_TYPES[ent]||[]).map(p=>`<option value="${p}">`).join('');
+  const card = document.getElementById(`fc-${clause}-${idx}`);
+  if (card) { const s=card.querySelector('.facet-summary'); if(s) s.textContent=facetSummary(f)||'konfigurieren…'; }
+}
+
+function updateFacetPropName(clause, idx, value) {
+  getFacetList(clause)[idx].baseName = value;
+  const card = document.getElementById(`fc-${clause}-${idx}`);
+  if (card) { const s=card.querySelector('.facet-summary'); if(s) s.textContent=facetSummary(getFacetList(clause)[idx])||'konfigurieren…'; }
+}
+
+function parseKey(key) {
+  const m = key.match(/^(app|req)-(\d+)$/);
+  return m ? [m[1], parseInt(m[2])] : [null,-1];
+}
+
+function setValueType(clause, idx, type) {
+  const f = getFacetList(clause)[idx];
+  if      (type==='none')        f.value = null;
+  else if (type==='simple')      f.value = { type:'simple', value:'' };
+  else if (type==='enumeration') f.value = { type:'enumeration', values:[''] };
+  else if (type==='pattern')     f.value = { type:'pattern', pattern:'' };
+  else if (type==='bounds')      f.value = { type:'bounds', minInclusive:'', maxInclusive:'', minExclusive:'', maxExclusive:'' };
+  else if (type==='length')      f.value = { type:'length', length:'', minLength:'', maxLength:'' };
+  const body = document.querySelector(`#fc-${clause}-${idx} .facet-card-body`);
+  if (body) body.innerHTML = renderFacetForm(f, clause, idx, clause==='req');
+}
+
+function updateValueSimple(clause, idx, value)  { const f=getFacetList(clause)[idx]; if(f.value) f.value.value=value; }
+function updateValueEnum(clause, idx, text)     { const f=getFacetList(clause)[idx]; if(f.value) f.value.values=text.split('\n').map(s=>s.trim()); }
+function updateValuePattern(clause, idx, value) { const f=getFacetList(clause)[idx]; if(f.value) f.value.pattern=value; }
+function updateValueBounds(clause, idx, field, value) { const f=getFacetList(clause)[idx]; if(f.value) f.value[field]=value; }
+function updateValueLength(clause, idx, field, value) { const f=getFacetList(clause)[idx]; if(f.value) f.value[field]=value; }
+
+/* ══════════════════════════════════════════════════════════════════
+   XML PREVIEW
+══════════════════════════════════════════════════════════════════ */
+function syntaxHighlight(xml) {
+  xml = xml.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return xml
+    .replace(/(&lt;\/?)(ids:[a-zA-Z]+|xs:[a-zA-Z]+)(\s|&gt;|\/&gt;)/g,'<span class="xml-tag">$1$2</span>$3')
+    .replace(/([a-zA-Z:]+)(=")([^"]*?)(")/g,'<span class="xml-attr">$1</span>="<span class="xml-val">$3</span>"')
+    .replace(/(&lt;!--.*?--&gt;)/g,'<span class="xml-comment">$1</span>');
+}
+
+function showXMLPreview() {
+  document.getElementById('xml-preview').innerHTML = syntaxHighlight(generateXML());
+  document.getElementById('xml-modal').classList.add('open');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EXPORT / IMPORT
+══════════════════════════════════════════════════════════════════ */
+function exportIDS() {
+  const m = getMeta();
+  if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
+  const blob = new Blob([generateXML()], {type:'application/xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (m.title||'ids').replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_') + '.ids';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ IDS-Datei exportiert');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EVENT WIRING
+══════════════════════════════════════════════════════════════════ */
+document.getElementById('btn-add-spec').onclick  = () => openSpecModal(-1);
+document.getElementById('btn-export').onclick    = exportIDS;
+document.getElementById('btn-preview').onclick   = showXMLPreview;
+document.getElementById('modal-close').onclick   = closeSpecModal;
+document.getElementById('modal-cancel').onclick  = closeSpecModal;
+document.getElementById('modal-save').onclick    = saveSpec;
+document.getElementById('xml-modal-close').onclick = () => document.getElementById('xml-modal').classList.remove('open');
+
+document.getElementById('btn-copy-xml').onclick = async () => {
+  try { await navigator.clipboard.writeText(generateXML()); showToast('✓ Kopiert'); }
+  catch { showToast('Kopieren fehlgeschlagen', true); }
+};
+
+// Global IFC version change → update state + all existing specs
+document.getElementById('meta-ifc-version').addEventListener('change', function() {
+  state.globalIfcVersion = this.value;
+  state.specs.forEach(s => s.ifcVersion = [this.value]);
+  renderSpecList();
+  showToast(`IFC-Version auf ${this.value} gesetzt — alle Spezifikationen aktualisiert`);
+});
+
+// IDS version change → could enable/disable facets in future
+document.getElementById('meta-ids-version').addEventListener('change', function() {
+  state.idsVersion = this.value;
+});
+
+document.getElementById('spec-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSpecModal(); });
+document.getElementById('xml-modal').addEventListener('click',  e => { if(e.target===e.currentTarget) document.getElementById('xml-modal').classList.remove('open'); });
+document.getElementById('btn-add-app-facet').onclick = () => addFacet('app');
+document.getElementById('btn-add-req-facet').onclick = () => addFacet('req');
+document.getElementById('app-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('app'); });
+document.getElementById('req-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('req'); });
+document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+document.getElementById('file-import').addEventListener('change', e => {
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ev => importXML(ev.target.result);
+  r.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('spec-modal').classList.remove('open');
+    document.getElementById('xml-modal').classList.remove('open');
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    if (document.getElementById('spec-modal').classList.contains('open')) saveSpec();
+    else exportIDS();
+  }
+});
+
+/* ── Init ──────────────────────────────────────────────────────── */
+document.getElementById('meta-date').value    = new Date().toISOString().split('T')[0];
+document.getElementById('meta-version').value = '1.0.0';
+state.globalIfcVersion = document.getElementById('meta-ifc-version').value;
+state.idsVersion       = document.getElementById('meta-ids-version').value;
+renderSpecList();
+</script>
+</body>
+</html>
