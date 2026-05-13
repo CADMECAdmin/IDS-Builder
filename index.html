@@ -1110,7 +1110,7 @@ function newFacet(type) {
   const base = { type, _open: true, instructions: '' };
   if (type === 'entity')         return {...base, name:'', predefinedType:''};
   if (type === 'attribute')      return {...base, name:'', value:null, cardinality:'required'};
-  if (type === 'property')       return {...base, propertySet:'', baseName:'', dataType:'IFCLABEL', value:null, uri:'', cardinality:'required'};
+  if (type === 'property')       return {...base, propertySet:'', baseName:'', dataType:'', value:null, uri:'', cardinality:'required'};
   if (type === 'classification') return {...base, system:'', value:null, uri:'', cardinality:'required'};
   if (type === 'material')       return {...base, value:null, uri:'', cardinality:'required'};
   if (type === 'partof')         return {...base, name:'', predefinedType:'', relation:'IFCRELAGGREGATES', cardinality:'required'};
@@ -1205,11 +1205,11 @@ function facetXml(f, inReq, indent) {
   }
 
   if (f.type === 'property') {
-    const dt  = f.dataType ? ` dataType="${f.dataType}"` : '';
     const uri = f.uri ? ` uri="${esc(f.uri)}"` : '';
-    let x = `${indent}<ids:property${dt}${uri}${card}${instr}>\n`;
+    let x = `${indent}<ids:property${uri}${card}${instr}>\n`;
     x += `${ii}<ids:propertySet><ids:simpleValue>${esc(f.propertySet)}</ids:simpleValue></ids:propertySet>\n`;
     x += `${ii}<ids:baseName><ids:simpleValue>${esc(f.baseName)}</ids:simpleValue></ids:baseName>\n`;
+    if (f.dataType) x += `${ii}<ids:dataType><ids:simpleValue>${esc(f.dataType)}</ids:simpleValue></ids:dataType>\n`;
     x += valueXml(f.value, ii);
     return x + `${indent}</ids:property>\n`;
   }
@@ -1269,8 +1269,9 @@ function generateXML() {
     if (s.identifier)   attrs += ` identifier="${esc(s.identifier)}"`;
     if (s.description)  attrs += `\n      description="${esc(s.description)}"`;
     if (s.instructions) attrs += `\n      instructions="${esc(s.instructions)}"`;
+    attrs += ` minOccurs="${s.minOccurs??0}" maxOccurs="${s.maxOccurs||'unbounded'}"`;
     x += `    <ids:specification ${attrs}>\n`;
-    x += `      <ids:applicability minOccurs="${s.minOccurs??0}" maxOccurs="${s.maxOccurs||'unbounded'}">\n`;
+    x += `      <ids:applicability>\n`;
     for (const f of s.applicability) x += facetXml(f, false, '        ');
     x += `      </ids:applicability>\n      <ids:requirements>\n`;
     for (const f of s.requirements) x += facetXml(f, true, '        ');
@@ -1364,9 +1365,12 @@ function importXML(xmlStr) {
       if (tag === 'property') {
         const pset = q(el,'propertySet')[0];
         const bn   = q(el,'baseName')[0];
+        const dtEl = q(el,'dataType')[0];
+        const dtSv = dtEl ? q(dtEl,'simpleValue')[0] : null;
         return { type:'property', _open:false, instructions:instr,
           cardinality: attr(el,'cardinality')||'required',
-          dataType: attr(el,'dataType'), uri: attr(el,'uri'),
+          dataType: dtSv ? dtSv.textContent.trim() : (attr(el,'dataType')||''),
+          uri: attr(el,'uri'),
           propertySet: pset ? (q(pset,'simpleValue')[0]||{}).textContent||'' : '',
           baseName:    bn   ? (q(bn,  'simpleValue')[0]||{}).textContent||'' : '',
           value: parseValue(q(el,'value')[0]),
@@ -1428,8 +1432,8 @@ function importXML(xmlStr) {
         name: attr(specEl,'name'), identifier: attr(specEl,'identifier'),
         description: attr(specEl,'description'), instructions: attr(specEl,'instructions'),
         ifcVersion: ivRaw,
-        minOccurs: appEl ? attr(appEl,'minOccurs')||0 : 0,
-        maxOccurs: appEl ? attr(appEl,'maxOccurs')||'unbounded' : 'unbounded',
+        minOccurs: attr(specEl,'minOccurs')||0,
+        maxOccurs: attr(specEl,'maxOccurs')||'unbounded',
         applicability: appEl ? parseFacets(appEl) : [],
         requirements:  reqEl ? parseFacets(reqEl) : [],
       });
@@ -1780,11 +1784,24 @@ function ff(label, html, full=false) {
   return `<div class="form-group${full?' full':''}"><label>${label}</label>${html}</div>`;
 }
 
+/* conditionalCardinality: required | optional | prohibited
+   Used by: attribute, property, classification */
 function cardinalitySelect(current, clause, idx) {
   return `<select onchange="updateFacet('${clause}',${idx},'cardinality',this.value)">
     <option value="required"${current==='required'?' selected':''}>required</option>
     <option value="optional"${current==='optional'?' selected':''}>optional</option>
     <option value="prohibited"${current==='prohibited'?' selected':''}>prohibited</option>
+  </select>`;
+}
+
+/* simpleCardinality: required | prohibited only
+   Used by: material, partOf — per IDS 1.0 XSD simpleCardinality type */
+function simpleCardinalitySelect(current, clause, idx) {
+  // Normalise legacy values: 'optional' → 'required'
+  const val = (current === 'prohibited') ? 'prohibited' : 'required';
+  return `<select onchange="updateFacet('${clause}',${idx},'cardinality',this.value)">
+    <option value="required"${val==='required'?' selected':''}>required</option>
+    <option value="prohibited"${val==='prohibited'?' selected':''}>prohibited</option>
   </select>`;
 }
 
@@ -1857,7 +1874,7 @@ function renderFacetForm(f, clause, idx, inReq) {
   }
 
   if (f.type === 'material') {
-    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    if (inReq) h += ff('Cardinality', simpleCardinalitySelect(f.cardinality, clause, idx));
     h += ff('URI (optional)', `<input oninput="updateFacet('${clause}',${idx},'uri',this.value)" value="${esc(f.uri||'')}" placeholder="bSDD-URI des Materials"/>`, !inReq);
     h += instrField(f, clause, idx);
     h += `</div><div style="margin-top:8px">${renderValueEditor(f.value, clause, idx, 'Materialname')}</div>`;
@@ -1876,7 +1893,7 @@ function renderFacetForm(f, clause, idx, inReq) {
     h += ff('PredefinedType (übergeordnet)',
       `<input oninput="updateFacet('${clause}',${idx},'predefinedType',this.value)" value="${esc(f.predefinedType||'')}" list="${pt2}" placeholder="Optional"/>
       <datalist id="${pt2}">${(PREDEFINED_TYPES[ent2]||[]).map(p=>`<option value="${p}">`).join('')}</datalist>`);
-    if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
+    if (inReq) h += ff('Cardinality', simpleCardinalitySelect(f.cardinality, clause, idx));
     h += instrField(f, clause, idx);
     return h + `</div>`;
   }
