@@ -328,11 +328,11 @@ body { background: var(--c-bg); min-height: 100vh; }
 
     <div class="form-group">
       <label>Titel <span style="color:var(--c-danger)">*</span></label>
-      <input id="meta-title" placeholder="z.B. Tragwerk – BIM-Anforderungen LPH 5" />
+      <input id="meta-title" placeholder="z. B. 31_ARC_Informationsanforderungen" />
     </div>
     <div class="form-group">
       <label>Beschreibung</label>
-      <textarea id="meta-description" placeholder="z.B. IFC-Anforderungen für die Ausführungsplanung Tragwerk"></textarea>
+      <textarea id="meta-description" placeholder="z. B. Informationsanforderungen Architekturmodell SIA-Phase 31"></textarea>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -354,7 +354,7 @@ body { background: var(--c-bg); min-height: 100vh; }
     </div>
     <div class="form-group">
       <label>Zweck</label>
-      <input id="meta-purpose" placeholder="z.B. Architektur – de-CH" />
+      <input id="meta-purpose" placeholder="z. B. QS ARC SIA 31" />
     </div>
 
     <!-- IDS Version + IFC Version (global) -->
@@ -379,7 +379,7 @@ body { background: var(--c-bg); min-height: 100vh; }
     <div class="form-group">
       <label>SIA-Phase</label>
       <select id="meta-milestone">
-        <option value="">– keine –</option>
+        <option value="">Bitte wählen Sie eine SIA-Phase aus</option>
         <option value="SIA 11">SIA 11 – Strategische Planung</option>
         <option value="SIA 21">SIA 21 – Vorstudien</option>
         <option value="SIA 31">SIA 31 – Vorprojekt</option>
@@ -394,7 +394,7 @@ body { background: var(--c-bg); min-height: 100vh; }
       </select>
     </div>
     <div class="divider"></div>
-    <h2>Facet-Legende</h2>
+    <h2>Facet-Übersicht</h2>
     <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
       <span><span class="facet-pill fp-entity">◈ Entity</span> IFC-Typ / Subtyp</span>
       <span><span class="facet-pill fp-attribute">⊞ Attribute</span> IFC-Attribut</span>
@@ -403,10 +403,6 @@ body { background: var(--c-bg); min-height: 100vh; }
       <span><span class="facet-pill fp-material">◎ Material</span> Materialzuweisung</span>
       <span><span class="facet-pill fp-partof">⊂ PartOf</span> Räuml. Zugehörigkeit</span>
     </div>
-    <div class="divider"></div>
-    <p style="font-size:11px;color:var(--c-muted);line-height:1.6">
-      Alle 6 IDS-Facetten implementiert · Werttypen: Einzelwert, Aufzählung, Regex, Numerische Grenzen, Textlänge · Cardinality je Facette · Instructions je Facette
-    </p>
   </aside>
 
   <!-- Main -->
@@ -443,15 +439,15 @@ body { background: var(--c-bg); min-height: 100vh; }
       <div class="spec-meta-grid">
         <div class="form-group">
           <label>Name <span style="color:var(--c-danger)">*</span></label>
-          <input id="spec-name" placeholder="z.B. Wand – Massiv" />
+          <input id="spec-name" placeholder="z. B. Wände" />
         </div>
         <div class="form-group">
           <label>Identifier</label>
-          <input id="spec-identifier" placeholder="z.B. ELE_001" />
+          <input id="spec-identifier" placeholder="z. B. W_001" />
         </div>
         <div class="form-group full">
           <label>Beschreibung</label>
-          <input id="spec-description" placeholder="Kurze Beschreibung der Spezifikation" />
+          <input id="spec-description" placeholder="Kurze Beschreibung der Spezifikation. Was wird geprüft?" />
         </div>
 
         <!-- IFC Version: global, nur Hinweis -->
@@ -495,11 +491,11 @@ body { background: var(--c-bg); min-height: 100vh; }
       <div class="divider"></div>
       <!-- Facet columns -->
       <div class="clauses-grid">
-        <!-- Applicability -->
+        <!-- Anwendungsbereich -->
         <div class="clause-col">
           <div class="clause-header">
             <div>
-              <div class="clause-title">Applicability</div>
+              <div class="clause-title">Anwendungsbereich</div>
               <div class="clause-subtitle">Welche Elemente werden geprüft? (UND-verknüpft)</div>
             </div>
           </div>
@@ -517,11 +513,11 @@ body { background: var(--c-bg); min-height: 100vh; }
             <button class="btn btn-secondary btn-sm" id="btn-add-app-facet">Hinzufügen</button>
           </div>
         </div>
-        <!-- Requirements -->
+        <!-- Anforderungen -->
         <div class="clause-col">
           <div class="clause-header">
             <div>
-              <div class="clause-title">Requirements</div>
+              <div class="clause-title">Anforderungen</div>
               <div class="clause-subtitle">Was muss vorhanden sein? (UND-verknüpft)</div>
             </div>
           </div>
@@ -529,7 +525,7 @@ body { background: var(--c-bg); min-height: 100vh; }
           <div class="add-facet-row">
             <select id="req-facet-type">
               <option value="">+ Facet hinzufügen…</option>
-              <!-- Entity ist in Requirements nicht zulässig -->
+              <!-- Entity ist in Anforderungen nicht zulässig -->
               <option value="attribute">Attribut</option>
               <option value="property">Property</option>
               <option value="classification">Klassifikation</option>
@@ -1209,7 +1205,7 @@ function renderSpecList() {
         <div class="spec-index">${i+1}</div>
         <div class="spec-title">
           <div class="spec-name">${esc(s.name)||'<em style="color:var(--c-muted)">Ohne Titel</em>'}</div>
-          <div class="spec-meta">${s.identifier?s.identifier+' · ':''}${s.applicability.length} Applicability · ${s.requirements.length} Requirements</div>
+          <div class="spec-meta">${s.identifier?s.identifier+' · ':''}${s.applicability.length} Anwendungsbereich · ${s.requirements.length} Anforderungen</div>
         </div>
         <div class="spec-actions" onclick="event.stopPropagation()">
           <button class="btn btn-ghost btn-icon" onclick="editSpec(${i})" title="Bearbeiten">
@@ -1225,8 +1221,8 @@ function renderSpecList() {
       </div>
       <div class="spec-card-body" id="card-body-${i}">
         <div class="spec-facets-preview">
-          <div><div class="facet-col-label">Applicability</div><div class="tag-row">${pills(s.applicability)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
-          <div><div class="facet-col-label">Requirements</div><div class="tag-row">${pills(s.requirements)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
+          <div><div class="facet-col-label">Anwendungsbereich</div><div class="tag-row">${pills(s.applicability)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
+          <div><div class="facet-col-label">Anforderungen</div><div class="tag-row">${pills(s.requirements)||'<span style="color:var(--c-muted);font-size:12px">–</span>'}</div></div>
         </div>
         ${s.description?`<p style="margin-top:8px;font-size:12px;color:var(--c-muted)">${esc(s.description)}</p>`:''}
       </div>
@@ -1324,12 +1320,12 @@ function checkDuplicateFacets(spec) {
     }
   }
 
-  check(spec.applicability, 'Applicability');
-  check(spec.requirements,  'Requirements');
+  check(spec.applicability, 'Anwendungsbereich');
+  check(spec.requirements,  'Anforderungen');
   return warnings;
 }
 
-/* Update Entity option in Applicability dropdown based on current facets */
+/* Update Entity option in Anwendungsbereich dropdown based on current facets */
 function updateEntityDropdown() {
   if (!state.editSpec) return;
   const sel = document.getElementById('app-facet-type');
@@ -1564,7 +1560,7 @@ function addFacet(clause) {
   // Entity max-1 check in Applicability
   if (clause === 'app' && type === 'entity') {
     if (facets.some(f => f.type === 'entity')) {
-      showToast('⚠ Nur eine Entity-Facette in Applicability erlaubt', true);
+      showToast('⚠ Nur eine Entity-Facette im Anwendungsbereich erlaubt', true);
       return;
     }
   }
