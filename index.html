@@ -326,25 +326,6 @@ body { background: var(--c-bg); min-height: 100vh; }
   <aside class="sidebar">
     <h2>IDS Metadaten</h2>
 
-    <!-- IDS Version + IFC Version (global) -->
-    <div class="version-row">
-      <div class="form-group">
-        <label>IDS Version</label>
-        <select id="meta-ids-version">
-          <option value="1.0" selected>IDS 1.0</option>
-          <!-- Zukünftige Versionen werden hier ergänzt -->
-        </select>
-      </div>
-      <div class="form-group">
-        <label>IFC Version</label>
-        <select id="meta-ifc-version">
-          <option value="IFC2X3">IFC2X3</option>
-          <option value="IFC4" selected>IFC4</option>
-          <option value="IFC4X3_ADD2">IFC4X3_ADD2</option>
-        </select>
-      </div>
-    </div>
-
     <div class="form-group">
       <label>Titel <span style="color:var(--c-danger)">*</span></label>
       <input id="meta-title" placeholder="z.B. Schulhaus Bullinger ARC" />
@@ -375,14 +356,41 @@ body { background: var(--c-bg); min-height: 100vh; }
       <label>Zweck</label>
       <input id="meta-purpose" placeholder="z.B. Architektur - de-DE" />
     </div>
+
+    <!-- IDS Version + IFC Version (global) -->
+    <div class="version-row">
+      <div class="form-group">
+        <label>IDS Version</label>
+        <select id="meta-ids-version">
+          <option value="1.0" selected>IDS 1.0</option>
+          <!-- Zukünftige Versionen werden hier ergänzt -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label>IFC Version</label>
+        <select id="meta-ifc-version">
+          <option value="IFC2X3">IFC2X3</option>
+          <option value="IFC4" selected>IFC4</option>
+          <option value="IFC4X3_ADD2">IFC4X3_ADD2</option>
+        </select>
+      </div>
+    </div>
+
     <div class="form-group">
-      <label>Meilenstein</label>
+      <label>SIA-Phase</label>
       <select id="meta-milestone">
-        <option value="">– kein –</option>
-        <option value="DESIGN">DESIGN</option>
-        <option value="CONSTRUCTION">CONSTRUCTION</option>
-        <option value="OPERATION">OPERATION</option>
-        <option value="MODIFICATION">MODIFICATION</option>
+        <option value="">– keine –</option>
+        <option value="SIA 11">SIA 11 – Strategische Planung</option>
+        <option value="SIA 21">SIA 21 – Vorstudien</option>
+        <option value="SIA 31">SIA 31 – Vorprojekt</option>
+        <option value="SIA 32">SIA 32 – Bauprojekt</option>
+        <option value="SIA 33">SIA 33 – Bewilligungsverfahren</option>
+        <option value="SIA 41">SIA 41 – Ausschreibung</option>
+        <option value="SIA 42">SIA 42 – Vergabe</option>
+        <option value="SIA 51">SIA 51 – Ausführungsplanung</option>
+        <option value="SIA 52">SIA 52 – Ausführung</option>
+        <option value="SIA 53">SIA 53 – Abschluss / Inbetriebnahme</option>
+        <option value="SIA 61">SIA 61 – Bewirtschaftung</option>
       </select>
     </div>
     <div class="divider"></div>
@@ -464,10 +472,18 @@ body { background: var(--c-bg); min-height: 100vh; }
             <button type="button" class="occ-btn" id="occ-exact"     onclick="setOccursPreset('occ-exact')">Genau eines</button>
             <button type="button" class="occ-btn" id="occ-custom"    onclick="setOccursPreset('occ-custom')">Benutzerdefiniert</button>
           </div>
-          <div class="occurs-row" id="occ-custom-row" style="display:none">
-            <input id="spec-min" type="number" min="0" value="0" />
-            <span>bis</span>
-            <input id="spec-max" value="unbounded" />
+          <div id="occ-custom-row" style="display:none;flex-direction:column;gap:6px;margin-top:6px">
+            <div class="field-hint" style="margin-bottom:2px">Geben Sie den Bereich ein. «Mindestens» = wie viele müssen vorhanden sein; «Höchstens» = maximale Anzahl (oder Unbegrenzt).</div>
+            <div class="occurs-row">
+              <span style="font-size:12px;color:var(--c-muted);white-space:nowrap">Mindestens</span>
+              <input id="spec-min" type="number" min="0" value="0" style="width:72px" />
+              <span style="font-size:12px;color:var(--c-muted);white-space:nowrap">Höchstens</span>
+              <input id="spec-max" type="number" min="0" value="1" style="width:72px" />
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--c-muted);white-space:nowrap;cursor:pointer;margin-left:4px">
+                <input type="checkbox" id="occ-unbounded" onchange="toggleUnbounded(this)" style="cursor:pointer" />
+                Unbegrenzt&nbsp;(∞)
+              </label>
+            </div>
           </div>
         </div>
 
@@ -1079,14 +1095,37 @@ const OCC_PRESETS = {
   'occ-exact':     { min: '1',  max: '1' },
 };
 
+function toggleUnbounded(cb) {
+  const maxField = document.getElementById('spec-max');
+  if (cb.checked) {
+    maxField._savedValue = maxField.value;
+    maxField.disabled = true;
+    maxField.style.opacity = '0.35';
+    maxField.value = '';
+    maxField.placeholder = '∞';
+  } else {
+    maxField.disabled = false;
+    maxField.style.opacity = '';
+    maxField.placeholder = '';
+    maxField.value = maxField._savedValue ?? '1';
+  }
+}
+
 function setOccursPreset(presetId) {
   document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(presetId)?.classList.add('active');
   const customRow = document.getElementById('occ-custom-row');
   if (presetId === 'occ-custom') {
     customRow.style.display = 'flex';
+    // Reset unbounded checkbox and max field
+    const cb = document.getElementById('occ-unbounded');
+    const maxField = document.getElementById('spec-max');
+    cb.checked = false;
+    maxField.disabled = false;
+    maxField.style.opacity = '';
+    maxField.placeholder = '';
     if (!document.getElementById('spec-min').value) document.getElementById('spec-min').value = '0';
-    if (!document.getElementById('spec-max').value) document.getElementById('spec-max').value = 'unbounded';
+    if (!maxField.value) maxField.value = '1';
   } else {
     customRow.style.display = 'none';
     const p = OCC_PRESETS[presetId];
@@ -1108,10 +1147,36 @@ function setOccursPresetByValues(min, max) {
   document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
 
-  document.getElementById('spec-min').value = m;
-  document.getElementById('spec-max').value = x;
   const customRow = document.getElementById('occ-custom-row');
-  customRow.style.display = (id === 'occ-custom') ? 'flex' : 'none';
+  const cb        = document.getElementById('occ-unbounded');
+  const maxField  = document.getElementById('spec-max');
+
+  if (id === 'occ-custom') {
+    customRow.style.display = 'flex';
+    document.getElementById('spec-min').value = m;
+    const isUnbounded = (x === 'unbounded');
+    cb.checked = isUnbounded;
+    if (isUnbounded) {
+      maxField._savedValue = '1';
+      maxField.disabled = true;
+      maxField.style.opacity = '0.35';
+      maxField.value = '';
+      maxField.placeholder = '∞';
+    } else {
+      maxField.disabled = false;
+      maxField.style.opacity = '';
+      maxField.placeholder = '';
+      maxField.value = x;
+    }
+  } else {
+    customRow.style.display = 'none';
+    cb.checked = false;
+    maxField.disabled = false;
+    maxField.style.opacity = '';
+    maxField.placeholder = '';
+    document.getElementById('spec-min').value = m;
+    maxField.value = x;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1214,7 +1279,10 @@ function saveSpec() {
   // IFC version is global — stored per-spec for XML compliance
   state.editSpec.ifcVersion   = [state.globalIfcVersion];
   state.editSpec.minOccurs    = document.getElementById('spec-min').value;
-  state.editSpec.maxOccurs    = document.getElementById('spec-max').value || 'unbounded';
+  const _unboundedCb = document.getElementById('occ-unbounded');
+  state.editSpec.maxOccurs    = (_unboundedCb && _unboundedCb.checked)
+    ? 'unbounded'
+    : (document.getElementById('spec-max').value || 'unbounded');
 
   // Duplicate warnings (non-blocking)
   const dupWarnings = checkDuplicateFacets(state.editSpec);
