@@ -1676,11 +1676,23 @@ function saveSpec() {
   state.editSpec.instructions = document.getElementById('spec-instructions').value.trim();
   // IFC version is global — stored per-spec for XML compliance
   state.editSpec.ifcVersion   = [state.globalIfcVersion];
-  state.editSpec.minOccurs    = document.getElementById('spec-min').value;
-  const _unboundedCb = document.getElementById('occ-unbounded');
-  state.editSpec.maxOccurs    = (_unboundedCb && _unboundedCb.checked)
-    ? 'unbounded'
-    : (document.getElementById('spec-max').value || 'unbounded');
+  // Read occurs from active preset button — avoids number-input rejecting 'unbounded'
+  const _activeBtn  = document.querySelector('.occ-btn.active');
+  const _presetId   = _activeBtn ? _activeBtn.id : 'occ-custom';
+  if (_presetId === 'occ-arbitrary') {
+    state.editSpec.minOccurs = '0'; state.editSpec.maxOccurs = 'unbounded';
+  } else if (_presetId === 'occ-atleast') {
+    state.editSpec.minOccurs = '1'; state.editSpec.maxOccurs = 'unbounded';
+  } else if (_presetId === 'occ-exact') {
+    state.editSpec.minOccurs = '1'; state.editSpec.maxOccurs = '1';
+  } else {
+    // Custom
+    state.editSpec.minOccurs = document.getElementById('spec-min').value || '0';
+    const _unboundedCb = document.getElementById('occ-unbounded');
+    state.editSpec.maxOccurs = (_unboundedCb && _unboundedCb.checked)
+      ? 'unbounded'
+      : (document.getElementById('spec-max').value || 'unbounded');
+  }
 
   // Duplicate warnings (non-blocking)
   const dupWarnings = checkDuplicateFacets(state.editSpec);
