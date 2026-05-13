@@ -1274,9 +1274,13 @@ function generateXML() {
     x += `    <ids:specification ${attrs}>\n`;
     x += `      <ids:applicability>\n`;
     for (const f of s.applicability) x += facetXml(f, false, '        ');
-    x += `      </ids:applicability>\n      <ids:requirements>\n`;
-    for (const f of s.requirements) x += facetXml(f, true, '        ');
-    x += `      </ids:requirements>\n    </ids:specification>\n\n`;
+    x += `      </ids:applicability>\n`;
+    if (s.requirements && s.requirements.length > 0) {
+      x += `      <ids:requirements>\n`;
+      for (const f of s.requirements) x += facetXml(f, true, '        ');
+      x += `      </ids:requirements>\n`;
+    }
+    x += `    </ids:specification>\n\n`;
   }
   return x + `  </ids:specifications>\n\n</ids:ids>`;
 }
