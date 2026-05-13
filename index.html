@@ -307,15 +307,19 @@ body { background: var(--c-bg); min-height: 100vh; }
   <div class="header-actions">
     <button class="btn btn-secondary btn-sm" id="btn-import">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      IDS importieren
+      IDS öffnen
+    </button>
+    <button class="btn btn-primary btn-sm" id="btn-save" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Speichern
     </button>
     <button class="btn btn-secondary btn-sm" id="btn-preview">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
       XML Vorschau
     </button>
-    <button class="btn btn-primary btn-sm" id="btn-export">
+    <button class="btn btn-secondary btn-sm" id="btn-export">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      .ids exportieren
+      Speichern unter…
     </button>
   </div>
 </header>
@@ -1096,7 +1100,17 @@ let state = {
   editSpec: null,
   globalIfcVersion: 'IFC4',
   idsVersion: '1.0',
+  fileHandle: null,        // File System Access API handle for direct save
 };
+
+function setFileHandle(handle) {
+  state.fileHandle = handle;
+  const btn = document.getElementById('btn-save');
+  if (btn) {
+    btn.style.display = handle ? '' : 'none';
+    btn.title = handle ? `Speichern in: ${handle.name}` : '';
+  }
+}
 
 function newSpec() {
   return {
@@ -2101,19 +2115,90 @@ function showXMLPreview() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   EXPORT / IMPORT
+   EXPORT / IMPORT / SAVE
 ══════════════════════════════════════════════════════════════════ */
-function exportIDS() {
-  const m = getMeta();
-  if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
-  const blob = new Blob([generateXML()], {type:'application/xml;charset=utf-8'});
+const FILE_PICKER_OPTS = {
+  types: [{ description: 'IDS-Datei', accept: { 'application/xml': ['.ids','.xml'] } }],
+  suggestedName: 'ids',
+};
+
+function _xmlBlob() {
+  return new Blob([generateXML()], { type: 'application/xml;charset=utf-8' });
+}
+function _fallbackDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = (m.title||'ids').replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_') + '.ids';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// Speichern — schreibt direkt in geöffnete Datei (Chrome/Edge) oder Download-Fallback
+async function saveIDS() {
+  const m = getMeta();
+  if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
+  const blob = _xmlBlob();
+  if (state.fileHandle) {
+    try {
+      const writable = await state.fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      showToast(`✓ Gespeichert: ${state.fileHandle.name}`);
+      return;
+    } catch(err) {
+      if (err.name === 'NotAllowedError') {
+        showToast('Zugriff verweigert — bitte erneut öffnen', true);
+        setFileHandle(null); return;
+      }
+    }
+  }
+  // Fallback
+  _fallbackDownload(blob, (m.title||'ids').replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_')+'.ids');
+  showToast('✓ IDS-Datei gespeichert');
+}
+
+// Speichern unter — File System Access API oder klassischer Download
+async function exportIDS() {
+  const m = getMeta();
+  if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
+  const blob = _xmlBlob();
+  const suggestedName = (m.title||'ids').replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_')+'.ids';
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({ ...FILE_PICKER_OPTS, suggestedName });
+      const writable = await handle.createWritable();
+      await writable.write(blob); await writable.close();
+      setFileHandle(handle);
+      showToast(`✓ Gespeichert: ${handle.name}`);
+      return;
+    } catch(err) {
+      if (err.name === 'AbortError') return; // User cancelled
+    }
+  }
+  _fallbackDownload(blob, suggestedName);
   showToast('✓ IDS-Datei exportiert');
+}
+
+// IDS öffnen — File System Access API oder klassischer File-Input
+async function openIDS() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'IDS-Datei', accept: { 'application/xml': ['.ids','.xml'] } }],
+        multiple: false,
+      });
+      const file = await handle.getFile();
+      const text = await file.text();
+      importXML(text);
+      setFileHandle(handle);
+      showToast(`✓ Geöffnet: ${handle.name}`);
+      return;
+    } catch(err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
+  // Fallback: klassischer file input
+  document.getElementById('file-import').click();
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2121,6 +2206,7 @@ function exportIDS() {
 ══════════════════════════════════════════════════════════════════ */
 document.getElementById('btn-add-spec').onclick  = () => openSpecModal(-1);
 document.getElementById('btn-export').onclick    = exportIDS;
+document.getElementById('btn-save').onclick      = saveIDS;
 document.getElementById('btn-preview').onclick   = showXMLPreview;
 document.getElementById('modal-close').onclick   = closeSpecModal;
 document.getElementById('modal-cancel').onclick  = closeSpecModal;
@@ -2151,7 +2237,7 @@ document.getElementById('btn-add-app-facet').onclick = () => addFacet('app');
 document.getElementById('btn-add-req-facet').onclick = () => addFacet('req');
 document.getElementById('app-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('app'); });
 document.getElementById('req-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('req'); });
-document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+document.getElementById('btn-import').onclick = openIDS;
 document.getElementById('file-import').addEventListener('change', e => {
   const file = e.target.files[0]; if(!file) return;
   const r = new FileReader();
@@ -2168,7 +2254,7 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key === 's') {
     e.preventDefault();
     if (document.getElementById('spec-modal').classList.contains('open')) saveSpec();
-    else exportIDS();
+    else saveIDS();
   }
 });
 
