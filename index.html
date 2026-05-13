@@ -966,31 +966,31 @@ const COMMON_PROPS = {
   'Pset_SpaceCommon':    ['IsExternal','Reference','Category','GrossPlannedArea','NetPlannedArea','OccupancyType'],
 };
 
-/* ── IFC Data Types — all valid types per IDS 1.0 (upperCaseName pattern) ──
-   Source: IFC2X3 TC1 + IFC4 ADD2 + IFC4X3 defined types, filtered to types
-   relevant as property data types in IDS specifications.                     */
-const DATA_TYPES = [
-  // ── Basic simple types ────────────────────────────────────────────
+/* ── IFC Data Types — version-specific, only valid IFC defined types
+   Source: IFC2X3 TC1 alphabeticalorder_definedtype + IFC4 ADD2 + IFC4X3
+   Filtered to types usable as property data types in IDS specifications.
+   IFC4 adds: IFCDATE, IFCDATETIME, IFCTIME, IFCDURATION, IFCPOSITIVEINTEGER,
+              IFCURIREFERENCE, IFCNONNEGATIVELENGTHMEASURE
+   IFC4X3 adds: IFCTEMPERATURERATEOFCHANGEMEASURE, IFCMASSMEASURE (kept same)  */
+const _DT_BASE = [
+  // ── Simple types (all versions) ───────────────────────────────────
   'IFCBOOLEAN','IFCLOGICAL','IFCINTEGER','IFCREAL',
   'IFCLABEL','IFCTEXT','IFCIDENTIFIER','IFCBINARY',
-  // IFC4+ simple types
-  'IFCDATE','IFCDATETIME','IFCTIME','IFCDURATION',
-  'IFCPOSITIVEINTEGER','IFCURIREFERENCE',
   // ── Count / Numeric ───────────────────────────────────────────────
   'IFCCOUNTMEASURE','IFCNUMERICMEASURE','IFCDESCRIPTIVEMEASURE',
   'IFCINTEGERCOUNTRATE','IFCCONTEXTDEPENDENTMEASURE',
   // ── Length / Area / Volume ────────────────────────────────────────
-  'IFCLENGTHMEASURE','IFCPOSITIVELENGTHMEASURE','IFCNONNEGATIVELENGTHMEASURE',
+  'IFCLENGTHMEASURE','IFCPOSITIVELENGTHMEASURE',
   'IFCAREAMEASURE','IFCVOLUMEMEASURE',
   // ── Mass ─────────────────────────────────────────────────────────
   'IFCMASSMEASURE','IFCMASSDENSITYMEASURE','IFCMASSFLOWRATEMEASURE',
   'IFCMASSPERLENGTH',
   // ── Time / Frequency ─────────────────────────────────────────────
-  'IFCTIMEMEASURE','IFCFREQUENCYMEASURE','IFCROTATIONALFREQUENCYMEASURE',
-  'IFCTIMESTAMP',
+  'IFCTIMEMEASURE','IFCTIMESTAMP',
+  'IFCFREQUENCYMEASURE','IFCROTATIONALFREQUENCYMEASURE',
   // ── Angle ────────────────────────────────────────────────────────
-  'IFCPLANEANGLEMEASURE','IFCSOLIDANGLEMEASURE','IFCPOSITIVEPLANEANGLEMEASURE',
-  'IFCCOMPOUNDPLANEANGLEMEASURE',
+  'IFCPLANEANGLEMEASURE','IFCPOSITIVEPLANEANGLEMEASURE',
+  'IFCSOLIDANGLEMEASURE','IFCCOMPOUNDPLANEANGLEMEASURE',
   // ── Ratio / Parameter ────────────────────────────────────────────
   'IFCNORMALISEDRATIONMEASURE','IFCRATIOMEASURE','IFCPOSITIVERATIOMEASURE',
   'IFCPARAMETERVALUE',
@@ -1011,7 +1011,7 @@ const DATA_TYPES = [
   'IFCMODULUSOFSUBGRADEREACTIONMEASURE',
   'IFCLINEARSTIFFNESSMEASURE','IFCROTATIONALSTIFFNESSMEASURE',
   'IFCMOMENTOFINERTIAMEASURE','IFCSECTIONMODULUSMEASURE',
-  'IFCSECTIONALAREAINTEGRLMEASURE','IFCWARPINGCONSTANTMEASURE',
+  'IFCSECTIONALAREAINTEGRALMEASURE','IFCWARPINGCONSTANTMEASURE',
   'IFCWARPINGMOMENTMEASURE','IFCCURVATUREMEASURE',
   // ── Velocity / Flow ──────────────────────────────────────────────
   'IFCLINEARVELOCITYMEASURE','IFCANGULARVELOCITYMEASURE',
@@ -1023,8 +1023,8 @@ const DATA_TYPES = [
   'IFCELECTRICCONDUCTANCEMEASURE','IFCELECTRICRESISTANCEMEASURE',
   'IFCINDUCTANCEMEASURE',
   // ── Light ────────────────────────────────────────────────────────
-  'IFCILLUMINANCEMEASURE','IFCLUMINOUSINTENSITYMEASURE','IFCLUMINOUSFLUXMEASURE',
-  'IFCLUMINOUSINTENSITYDISTRIBUTIONMEASURE',
+  'IFCILLUMINANCEMEASURE','IFCLUMINOUSINTENSITYMEASURE',
+  'IFCLUMINOUSFLUXMEASURE','IFCLUMINOUSINTENSITYDISTRIBUTIONMEASURE',
   // ── Other physical ───────────────────────────────────────────────
   'IFCMONETARYMEASURE','IFCAMOUNTOFSUBSTANCEMEASURE',
   'IFCSOUNDPOWERMEASURE','IFCSOUNDPRESSUREMEASURE',
@@ -1034,6 +1034,26 @@ const DATA_TYPES = [
   'IFCPHMEASURE','IFCIONCONCENTRATIONMEASURE','IFCMOLECULARWEIGHTMEASURE',
   'IFCROTATIONALMASSMEASURE',
 ];
+const DATA_TYPES_BY_VERSION = {
+  'IFC2X3': _DT_BASE,
+  'IFC4':   [..._DT_BASE,
+    // IFC4-only additions
+    'IFCDATE','IFCDATETIME','IFCTIME','IFCDURATION',
+    'IFCPOSITIVEINTEGER','IFCURIREFERENCE','IFCNONNEGATIVELENGTHMEASURE',
+  ],
+  'IFC4X3_ADD2': [..._DT_BASE,
+    // IFC4 additions
+    'IFCDATE','IFCDATETIME','IFCTIME','IFCDURATION',
+    'IFCPOSITIVEINTEGER','IFCURIREFERENCE','IFCNONNEGATIVELENGTHMEASURE',
+    // IFC4X3 additions
+    'IFCTEMPERATURERATEOFCHANGEMEASURE',
+    'IFCSOUNDPRESSURELEVELMEASURE','IFCSOUNDPOWERLEVELMEASURE',
+    'IFCAREATIMEMEASURE','IFCPOWERMEASURE',
+  ],
+};
+function getDataTypeList() {
+  return DATA_TYPES_BY_VERSION[state.globalIfcVersion] || DATA_TYPES_BY_VERSION['IFC4'];
+}
 
 const ATTRIBUTE_NAMES = [
   'GlobalId','Name','Description','ObjectType','Tag','LongName',
@@ -1814,12 +1834,11 @@ function renderFacetForm(f, clause, idx, inReq) {
     h += ff('Property Name',
       `<input oninput="updateFacetPropName('${clause}',${idx},this.value)" value="${esc(f.baseName)}" list="${bnl}" placeholder="z.B. IsExternal"/>
       <datalist id="${bnl}">${getPropSuggestions(f.propertySet).map(p=>`<option value="${p}">`).join('')}</datalist>`);
-    const dtListId = `dt-${key}`;
     h += ff('Datentyp',
-      `<input oninput="updateFacet('${clause}',${idx},'dataType',this.value.toUpperCase())"
-         value="${esc(f.dataType||'')}" list="${dtListId}"
-         placeholder="z. B. IFCLABEL" style="text-transform:uppercase"/>
-       <datalist id="${dtListId}">${DATA_TYPES.map(d=>`<option value="${d}">`).join('')}</datalist>`);
+      `<select onchange="updateFacet('${clause}',${idx},'dataType',this.value)">
+         <option value="">– Datentyp wählen –</option>
+         ${getDataTypeList().map(d=>`<option value="${d}"${d===f.dataType?' selected':''}>${d}</option>`).join('')}
+       </select>`);
     if (inReq) h += ff('Cardinality', cardinalitySelect(f.cardinality, clause, idx));
     h += ff('URI (optional)',
       `<input oninput="updateFacet('${clause}',${idx},'uri',this.value)" value="${esc(f.uri||'')}" placeholder="https://identifier.buildingsmart.org/…"/>`, true);
