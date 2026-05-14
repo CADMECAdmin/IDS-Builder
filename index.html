@@ -2375,7 +2375,6 @@ let aiCfg = {
   provider: '', apiKey: '', serverUrl: 'http://localhost:11434',
   model: 'claude-sonnet-4-5',
   modelVerified: false, // true erst nach erfolgreichem Verbindungstest
-  discipline: '', customPsets: '', siaPhasen: '',
 };
 let aiMessages = [];
 
@@ -2450,7 +2449,7 @@ function isAIConfigured() { return aiCfg.provider && (aiCfg.apiKey || aiCfg.prov
 
 // ── Onboarding ───────────────────────────────────────────────────
 let obStep = 0;
-const OB_STEPS = 3;
+const OB_STEPS = 2;
 
 function openAIOnboarding(fromSettings) {
   obStep = fromSettings ? 0 : 0;
@@ -2487,11 +2486,6 @@ function obSave() {
     } else {
       aiCfg.serverUrl = document.getElementById('ob-serverurl').value.trim() || 'http://localhost:11434';
     }
-  }
-  if (obStep === 2) {
-    aiCfg.discipline  = document.getElementById('ob-discipline').value.trim();
-    aiCfg.customPsets = document.getElementById('ob-psets').value.trim();
-    aiCfg.siaPhasen   = document.getElementById('ob-sia').value.trim();
   }
 }
 
@@ -2585,27 +2579,6 @@ function renderObStep() {
           </div>
         </div>`;
     }
-  } else if (obStep === 2) {
-    c.innerHTML = `
-      <div class="ob-section">
-        <p style="font-size:13px;color:var(--c-muted)">Diese Angaben helfen der AI, bessere Spezifikationen zu erstellen. Alle Felder sind optional.</p>
-        <div class="form-group">
-          <label>Disziplin</label>
-          <select id="ob-discipline">
-            <option value="">— nicht angegeben —</option>
-            ${['Architektur','Tragwerk','HLKS','Elektro','Infrastruktur','Generalplanung'].map(d=>`<option value="${d}" ${aiCfg.discipline===d?'selected':''}>${d}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Eigene Property Sets (einer pro Zeile: PsetName.PropertyName)</label>
-          <textarea id="ob-psets" rows="4" style="font-family:monospace;font-size:12px" placeholder="CADMEC_Allgemein.ObjektID&#10;CADMEC_Allgemein.Verantwortlicher&#10;CADMEC_Raum.Nutzung">${aiCfg.customPsets}</textarea>
-          <div class="ob-hint">Diese Properties kennt die AI und schlägt sie automatisch vor.</div>
-        </div>
-        <div class="form-group">
-          <label>Relevante SIA-Phasen (kommagetrennt)</label>
-          <input id="ob-sia" placeholder="z. B. 31, 41, 51" value="${aiCfg.siaPhasen}" />
-        </div>
-      </div>`;
   }
 }
 
@@ -2807,11 +2780,8 @@ async function callAI(messages, testOnly) {
 // ── System Prompt ────────────────────────────────────────────────
 function buildSystemPrompt() {
   const userCtx = [
-    aiCfg.discipline  ? `- Disziplin: ${aiCfg.discipline}` : '',
     `- IFC-Version: ${state.globalIfcVersion}`,
-    aiCfg.customPsets ? `- Eigene Property Sets:\n${aiCfg.customPsets.split('\n').map(l=>'  '+l).join('\n')}` : '',
-    aiCfg.siaPhasen   ? `- Relevante SIA-Phasen: ${aiCfg.siaPhasen}` : '',
-  ].filter(Boolean).join('\n');
+  ].join('\n');
 
   return `Du bist ein IDS-Spezialist (Information Delivery Specification 1.0, buildingSMART).
 Deine Aufgabe: Nutzer beim Erstellen von IDS-Spezifikationen unterstützen.
