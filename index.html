@@ -2713,7 +2713,7 @@ async function sendAIMessage() {
     const parsed = parseAIResponse(reply);
 
     if (parsed.type === 'spec') {
-      appendAIMessage('assistant', parsed.summary);
+      if (parsed.summary) appendAIMessage('assistant', parsed.summary);
       const specInfo = createSpecFromAI(parsed.spec);
       appendAIMessage('assistant', specInfo, true);
       aiMessages = []; // Reset nach erfolgreicher Spec
@@ -2811,7 +2811,7 @@ async function bsddSearchEntity(searchTerm) {
     const classes = (data.classes || []).slice(0, 10).map(c => ({
       ifcClass: c.name,                          // z.B. IfcSanitaryTerminal
       ifcClassUpper: c.name.toUpperCase(),       // z.B. IFCSANITARYTERMINAL
-      definition: (c.definition || '').slice(0, 120),
+      definition: (c.description || c.definition || '').slice(0, 120),
     }));
     return classes.length
       ? { matches: classes }
@@ -3083,8 +3083,8 @@ function createSpecFromAI(json) {
     description:  json.description || '',
     instructions: '',
     ifcVersion:   [state.globalIfcVersion],
-    minOccurs:    json.minOccurs ?? '1',
-    maxOccurs:    json.maxOccurs ?? 'unbounded',
+    minOccurs:    String(json.minOccurs ?? '1'),
+    maxOccurs:    String(json.maxOccurs ?? 'unbounded'),
     applicability: (json.applicability || []).map(convertAIFacet),
     requirements:  (json.requirements  || []).map(f => convertAIFacet(f, true)),
   };
@@ -3104,12 +3104,20 @@ function createSpecFromAI(json) {
 
 function convertAIFacet(f, inReq) {
   const base = { type: f.type };
+
+  // Hilfsfunktion: Wert normalisieren (String/Zahl → simple, Array → enum)
+  function aiValue(v) {
+    if (v == null) return null;
+    if (Array.isArray(v)) return { type:'enum', values: v.map(String) };
+    return { type:'simple', simpleValue: String(v) };
+  }
+
   if (f.type === 'entity') {
     return { ...base, name: (f.name||'').toUpperCase(), predefinedType: f.predefinedType||'', value: null };
   }
   if (f.type === 'attribute') {
     return { ...base, name: f.name||'', cardinality: f.cardinality||'required',
-      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+      value: aiValue(f.value) };
   }
   if (f.type === 'property') {
     return { ...base,
@@ -3118,19 +3126,27 @@ function convertAIFacet(f, inReq) {
       dataType:    f.dataType || '',
       uri:         f.uri || '',
       cardinality: f.cardinality || 'required',
-      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+      value: aiValue(f.value) };
   }
   if (f.type === 'classification') {
-    return { ...base, system: f.system||'', cardinality: f.cardinality||'required',
-      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+    return { ...base, system: f.system||'', uri: f.uri||'', cardinality: f.cardinality||'required',
+      value: aiValue(f.value) };
   }
   if (f.type === 'material') {
-    return { ...base, cardinality: f.cardinality||'required',
-      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+    return { ...base, uri: f.uri||'', cardinality: f.cardinality||'required',
+      value: aiValue(f.value) };
   }
   if (f.type === 'partof') {
-    return { ...base, relation: (f.relation||'').toUpperCase(),
-      entity: f.entity ? { name:(f.entity).toUpperCase() } : null };
+    // AI liefert entity als String oder Objekt {name,predefinedType} — Builder speichert name/predefinedType flach
+    const entityName = f.entity
+      ? (typeof f.entity === 'string' ? f.entity : f.entity.name || '')
+      : (f.name || '');
+    const entityPT = f.entity?.predefinedType || f.predefinedType || '';
+    return { ...base,
+      relation:      (f.relation||'IFCRELAGGREGATES').toUpperCase(),
+      name:          entityName.toUpperCase(),
+      predefinedType: entityPT,
+      cardinality:   f.cardinality || 'required' };
   }
   return base;
 }
