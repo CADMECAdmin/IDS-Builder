@@ -4569,8 +4569,8 @@ function exportHTMLReport() {
   const passedSpecs  = results.filter(r => r.status === 'pass').length;
   const totalElems   = results.reduce((s, r) => s + r.applicableCount, 0);
   const failedElems  = results.reduce((s, r) => s + r.failCount, 0);
-  const idsTitle     = meta?.title || 'Ohne Titel';
-  const projectName  = meta?.description || meta?.title || 'IDS Prüfbericht';
+  const idsTitle  = meta?.title  || 'Ohne Titel';
+  const idsAuthor = meta?.author || '';
 
   function esc(s) {
     if (!s && s !== 0) return '';
@@ -4735,10 +4735,10 @@ h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
 <div class="report-header">
   <div class="report-title">IDS Prüfbericht</div>
   <div class="report-meta">
-    <span class="label">Projekt:</span><span>${esc(projectName)}</span>
-    <span class="label">IFC-Datei:</span><span>${esc(ifcFile)}</span>
-    <span class="label">IDS-Titel:</span><span>${esc(idsTitle)}</span>
+    <span class="label">IDS:</span><span>${esc(idsTitle)}</span>
     <span class="label">Datum/Uhrzeit:</span><span>${dateStr} ${timeStr}</span>
+    <span class="label">IFC-Datei:</span><span>${esc(ifcFile)}</span>
+    ${idsAuthor ? `<span class="label">Erstellt von:</span><span>${esc(idsAuthor)}</span>` : '<span></span><span></span>'}
   </div>
 </div>
 
@@ -4862,6 +4862,10 @@ function exportBCFReport() {
     showToast('Keine Fehler – BCF-Export nicht nötig');
     return;
   }
+  const BCF_MAX_TOPICS = 500;
+  let totalTopics = failingResults.reduce((s, r) => s + r.failures.length, 0);
+  const truncated  = totalTopics > BCF_MAX_TOPICS;
+  if (truncated) showToast(`Hinweis: BCF auf ${BCF_MAX_TOPICS} Issues begrenzt (${totalTopics} total)`, false);
 
   const files = [];
 
@@ -4878,8 +4882,11 @@ function exportBCFReport() {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
   }
 
-  for (const r of failingResults) {
+  let topicCounter = 0;
+  outer: for (const r of failingResults) {
     for (const f of r.failures) {
+      if (topicCounter >= BCF_MAX_TOPICS) break outer;
+      topicCounter++;
       const topicGuid = newUUID();
       const vpGuid    = newUUID();
       const elemLabel = f.name || f.globalId || String(f.elemId);
@@ -4893,15 +4900,16 @@ function exportBCFReport() {
   </Viewpoints>`
         : '';
 
+      // BCF 2.1 XSD sequence: Title → Labels → CreationDate → CreationAuthor → Description
       const markupXml = `<?xml version="1.0" encoding="UTF-8"?>
 <Markup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/buildingSMART/BCF-XML/master/Schemas/markup.xsd">
   <Topic Guid="${topicGuid}" TopicType="Issue" TopicStatus="Open">
     <Title>${xmlEsc(title)}</Title>
-    <Description>${xmlEsc(description)}</Description>
+    <Labels>IDS</Labels>
     <CreationDate>${isoNow}</CreationDate>
     <CreationAuthor>IDS-Builder</CreationAuthor>
-    <Labels>IDS</Labels>
+    <Description>${xmlEsc(description)}</Description>
   </Topic>
 ${viewpointsBlock}
 </Markup>`;
