@@ -138,6 +138,53 @@ body { background: var(--c-bg); min-height: 100vh; }
 .fp-material       { background: #fce7f3; color: var(--facet-material); }
 .fp-partof         { background: #ccfbf1; color: var(--facet-partof); }
 
+/* ── AI Assistant ──────────────────────────────────────────────── */
+.btn-ai {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; border-color: #6366f1;
+}
+.btn-ai:hover { background: linear-gradient(135deg, #4f46e5, #7c3aed); border-color: #4f46e5; }
+.ai-chat-modal { max-width: 680px !important; height: 85vh; display: flex; flex-direction: column; }
+.ai-chat-body  { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.ai-msg { display: flex; gap: 10px; align-items: flex-start; }
+.ai-msg.user { flex-direction: row-reverse; }
+.ai-bubble {
+  max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+}
+.ai-msg.assistant .ai-bubble { background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 4px 12px 12px 12px; }
+.ai-msg.user      .ai-bubble { background: var(--c-primary); color: white; border-radius: 12px 4px 12px 12px; }
+.ai-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ai-msg.assistant .ai-avatar { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
+.ai-msg.user      .ai-avatar { background: var(--c-border); }
+.ai-input-row { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--c-border); }
+.ai-input-row textarea {
+  flex: 1; resize: none; border: 1px solid var(--c-border); border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; font-family: inherit; outline: none;
+  transition: border-color .15s; height: 44px; min-height: 44px; max-height: 120px;
+}
+.ai-input-row textarea:focus { border-color: var(--c-primary); }
+.ai-spec-preview {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
+  padding: 12px 14px; font-size: 12px;
+}
+.ai-spec-preview strong { color: #15803d; display: block; margin-bottom: 6px; }
+.ai-typing { color: var(--c-muted); font-size: 12px; font-style: italic; padding: 4px 14px; }
+.ob-steps { display: flex; gap: 8px; margin-bottom: 20px; }
+.ob-step {
+  flex: 1; height: 4px; border-radius: 2px; background: var(--c-border); transition: background .3s;
+}
+.ob-step.active  { background: var(--c-primary); }
+.ob-step.done    { background: #86efac; }
+.ob-section { display: flex; flex-direction: column; gap: 14px; }
+.ob-hint { font-size: 12px; color: var(--c-muted); margin-top: 4px; }
+.ob-key-row { display: flex; gap: 8px; align-items: flex-end; }
+.ob-key-row input { flex: 1; }
+.ai-settings-link { font-size: 12px; color: var(--c-primary); cursor: pointer; text-decoration: underline; }
+
 /* ── Modal ─────────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200;
@@ -305,6 +352,10 @@ body { background: var(--c-bg); min-height: 100vh; }
     <span class="brand-title">IDS Builder</span>
   </div>
   <div class="header-actions">
+    <button class="btn btn-ai btn-sm" id="btn-ai-open">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      AI-Assistent
+    </button>
     <button class="btn btn-secondary btn-sm" id="btn-import">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       IDS öffnen
@@ -565,6 +616,61 @@ body { background: var(--c-bg); min-height: 100vh; }
     </div>
     <div class="modal-body" style="padding:16px">
       <div class="xml-container" id="xml-preview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI ONBOARDING MODAL ───────────────────────────────────────── -->
+<div class="modal-backdrop" id="ai-onboarding-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="ob-title">AI-Assistent einrichten</h2>
+      <button class="btn btn-ghost btn-icon" onclick="closeAIOnboarding()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:24px">
+      <div class="ob-steps">
+        <div class="ob-step active" id="ob-s0"></div>
+        <div class="ob-step" id="ob-s1"></div>
+        <div class="ob-step" id="ob-s2"></div>
+      </div>
+      <div id="ob-content"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px">
+        <button class="btn btn-secondary" id="ob-back" onclick="obBack()" style="display:none">Zurück</button>
+        <button class="btn btn-primary" id="ob-next" onclick="obNext()">Weiter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI CHAT MODAL ─────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="ai-chat-modal">
+  <div class="modal ai-chat-modal">
+    <div class="modal-header" style="flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:white;font-size:13px">✦</div>
+        <div>
+          <div style="font-weight:600;font-size:14px">AI-Assistent</div>
+          <div style="font-size:11px;color:var(--c-muted)" id="ai-provider-label"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openAIOnboarding(true)" title="Einstellungen">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-icon" onclick="closeAIChat()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="ai-chat-body" id="ai-chat-body"></div>
+    <div id="ai-typing-indicator" style="display:none" class="ai-typing">✦ AI schreibt…</div>
+    <div class="ai-input-row">
+      <textarea id="ai-input" placeholder="Beschreibe was du prüfen möchtest…" rows="1"></textarea>
+      <button class="btn btn-primary" id="ai-send-btn" onclick="sendAIMessage()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -2237,6 +2343,7 @@ document.getElementById('btn-add-req-facet').onclick = () => addFacet('req');
 document.getElementById('app-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('app'); });
 document.getElementById('req-facet-type').addEventListener('change', e => { if(e.target.value) addFacet('req'); });
 document.getElementById('btn-import').onclick = openIDS;
+document.getElementById('btn-ai-open').onclick = openAIPanel;
 document.getElementById('file-import').addEventListener('change', e => {
   const file = e.target.files[0]; if(!file) return;
   const r = new FileReader();
@@ -2249,6 +2356,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.getElementById('spec-modal').classList.remove('open');
     document.getElementById('xml-modal').classList.remove('open');
+    document.getElementById('ai-onboarding-modal').classList.remove('open');
+    document.getElementById('ai-chat-modal').classList.remove('open');
   }
   if ((e.ctrlKey||e.metaKey) && e.key === 's') {
     e.preventDefault();
@@ -2256,6 +2365,432 @@ document.addEventListener('keydown', e => {
     else saveIDS();
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   AI ASSISTANT
+══════════════════════════════════════════════════════════════════ */
+let aiCfg = {
+  provider: '', apiKey: '', serverUrl: 'http://localhost:11434',
+  discipline: '', customPsets: '', siaPhasen: '',
+};
+let aiMessages = [];
+
+function loadAICfg() {
+  const s = localStorage.getItem('ids_ai_cfg');
+  if (s) try { aiCfg = { ...aiCfg, ...JSON.parse(s) }; } catch(e) {}
+}
+function saveAICfg() { localStorage.setItem('ids_ai_cfg', JSON.stringify(aiCfg)); }
+function isAIConfigured() { return aiCfg.provider && (aiCfg.apiKey || aiCfg.provider === 'ollama'); }
+
+// ── Onboarding ───────────────────────────────────────────────────
+let obStep = 0;
+const OB_STEPS = 3;
+
+function openAIOnboarding(fromSettings) {
+  obStep = fromSettings ? 0 : 0;
+  document.getElementById('ai-chat-modal').classList.remove('open');
+  document.getElementById('ai-onboarding-modal').classList.add('open');
+  renderObStep();
+}
+function closeAIOnboarding() {
+  document.getElementById('ai-onboarding-modal').classList.remove('open');
+}
+function obBack() { if (obStep > 0) { obStep--; renderObStep(); } }
+async function obNext() {
+  if (!obValidate()) return;
+  obSave();
+  if (obStep < OB_STEPS - 1) { obStep++; renderObStep(); }
+  else { saveAICfg(); closeAIOnboarding(); openAIChat(); }
+}
+
+function obValidate() {
+  if (obStep === 0 && !aiCfg.provider) { showToast('Bitte einen Anbieter wählen', true); return false; }
+  if (obStep === 1) {
+    if (aiCfg.provider === 'anthropic' && !document.getElementById('ob-apikey').value.trim()) {
+      showToast('Bitte API-Key eingeben', true); return false;
+    }
+  }
+  return true;
+}
+function obSave() {
+  if (obStep === 0) aiCfg.provider = document.querySelector('input[name="ob-provider"]:checked')?.value || aiCfg.provider;
+  if (obStep === 1) {
+    if (aiCfg.provider === 'anthropic') aiCfg.apiKey = document.getElementById('ob-apikey').value.trim();
+    else aiCfg.serverUrl = document.getElementById('ob-serverurl').value.trim() || 'http://localhost:11434';
+  }
+  if (obStep === 2) {
+    aiCfg.discipline  = document.getElementById('ob-discipline').value.trim();
+    aiCfg.customPsets = document.getElementById('ob-psets').value.trim();
+    aiCfg.siaPhasen   = document.getElementById('ob-sia').value.trim();
+  }
+}
+
+function renderObStep() {
+  // Steps indicator
+  for (let i = 0; i < OB_STEPS; i++) {
+    const el = document.getElementById('ob-s'+i);
+    el.className = 'ob-step' + (i < obStep ? ' done' : i === obStep ? ' active' : '');
+  }
+  document.getElementById('ob-back').style.display = obStep > 0 ? '' : 'none';
+  document.getElementById('ob-next').textContent   = obStep === OB_STEPS-1 ? 'Fertig' : 'Weiter';
+
+  const titles = ['Anbieter wählen', 'Zugang einrichten', 'Arbeitskontext'];
+  document.getElementById('ob-title').textContent = 'AI-Assistent — ' + titles[obStep];
+
+  const c = document.getElementById('ob-content');
+  if (obStep === 0) {
+    c.innerHTML = `
+      <p style="font-size:13px;color:var(--c-muted);margin-bottom:16px">Welchen AI-Dienst möchtest du verwenden?</p>
+      <div class="ob-section" style="gap:10px">
+        <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;border:2px solid var(--c-border);border-radius:8px;cursor:pointer;transition:border-color .15s"
+          onmouseover="this.style.borderColor='var(--c-primary)'" onmouseout="this.style.borderColor=aiCfg.provider==='anthropic'?'var(--c-primary)':'var(--c-border)'">
+          <input type="radio" name="ob-provider" value="anthropic" ${aiCfg.provider==='anthropic'?'checked':''} style="margin-top:2px" onchange="aiCfg.provider='anthropic';renderObStep()">
+          <div>
+            <div style="font-weight:600;font-size:13px">Anthropic Claude <span style="font-size:11px;color:var(--c-muted);font-weight:400">(Cloud)</span></div>
+            <div style="font-size:12px;color:var(--c-muted);margin-top:2px">Einfach einzurichten, benötigt Internet. Kosten trägt jeder Nutzer selbst (~$0.01 pro Spezifikation).</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;border:2px solid var(--c-border);border-radius:8px;cursor:pointer;transition:border-color .15s"
+          onmouseover="this.style.borderColor='var(--c-primary)'" onmouseout="this.style.borderColor=aiCfg.provider==='ollama'?'var(--c-primary)':'var(--c-border)'">
+          <input type="radio" name="ob-provider" value="ollama" ${aiCfg.provider==='ollama'?'checked':''} style="margin-top:2px" onchange="aiCfg.provider='ollama';renderObStep()">
+          <div>
+            <div style="font-weight:600;font-size:13px">Eigener Server (Ollama) <span style="font-size:11px;color:var(--c-muted);font-weight:400">(lokal / Schweiz)</span></div>
+            <div style="font-size:12px;color:var(--c-muted);margin-top:2px">Daten verlassen den Server nicht. Ideal für Datenschutz. Benötigt eigene Server-Infrastruktur.</div>
+          </div>
+        </label>
+      </div>`;
+  } else if (obStep === 1) {
+    if (aiCfg.provider === 'anthropic') {
+      c.innerHTML = `
+        <div class="ob-section">
+          <div>
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px">Anthropic API-Key</div>
+            <p style="font-size:12px;color:var(--c-muted);margin-bottom:12px">
+              So erhältst du einen API-Key:<br><br>
+              1. Öffne <a href="https://console.anthropic.com" target="_blank" style="color:var(--c-primary)">console.anthropic.com</a><br>
+              2. Konto erstellen oder einloggen<br>
+              3. Links auf «API Keys» → «Create Key»<br>
+              4. Key kopieren und hier einfügen
+            </p>
+            <div class="ob-key-row">
+              <input id="ob-apikey" type="password" placeholder="sk-ant-api03-…" value="${aiCfg.apiKey}" />
+              <button class="btn btn-secondary btn-sm" onclick="testAIConnection()">Testen</button>
+            </div>
+            <div class="ob-hint">⚠ Der Key wird nur lokal in deinem Browser gespeichert. Niemand sonst hat Zugriff.</div>
+          </div>
+        </div>`;
+    } else {
+      c.innerHTML = `
+        <div class="ob-section">
+          <div>
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px">Ollama Server-URL</div>
+            <p style="font-size:12px;color:var(--c-muted);margin-bottom:12px">
+              Ollama muss auf deinem Server installiert und gestartet sein.<br>
+              → <a href="https://ollama.ai" target="_blank" style="color:var(--c-primary)">ollama.ai</a> — kostenlos, open source<br><br>
+              Empfohlenes Modell: <code>ollama pull llama3.1</code>
+            </p>
+            <div class="ob-key-row">
+              <input id="ob-serverurl" type="text" placeholder="http://localhost:11434" value="${aiCfg.serverUrl}" />
+              <button class="btn btn-secondary btn-sm" onclick="testAIConnection()">Testen</button>
+            </div>
+          </div>
+        </div>`;
+    }
+  } else if (obStep === 2) {
+    c.innerHTML = `
+      <div class="ob-section">
+        <p style="font-size:13px;color:var(--c-muted)">Diese Angaben helfen der AI, bessere Spezifikationen zu erstellen. Alle Felder sind optional.</p>
+        <div class="form-group">
+          <label>Disziplin</label>
+          <select id="ob-discipline">
+            <option value="">— nicht angegeben —</option>
+            ${['Architektur','Tragwerk','HLKS','Elektro','Infrastruktur','Generalplanung'].map(d=>`<option value="${d}" ${aiCfg.discipline===d?'selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Eigene Property Sets (einer pro Zeile: PsetName.PropertyName)</label>
+          <textarea id="ob-psets" rows="4" style="font-family:monospace;font-size:12px" placeholder="CADMEC_Allgemein.ObjektID&#10;CADMEC_Allgemein.Verantwortlicher&#10;CADMEC_Raum.Nutzung">${aiCfg.customPsets}</textarea>
+          <div class="ob-hint">Diese Properties kennt die AI und schlägt sie automatisch vor.</div>
+        </div>
+        <div class="form-group">
+          <label>Relevante SIA-Phasen (kommagetrennt)</label>
+          <input id="ob-sia" placeholder="z. B. 31, 41, 51" value="${aiCfg.siaPhasen}" />
+        </div>
+      </div>`;
+  }
+}
+
+async function testAIConnection() {
+  const btn = event.target;
+  btn.textContent = '…'; btn.disabled = true;
+  obSave();
+  try {
+    await callAI([{role:'user',content:'Antworte nur mit: OK'}], true);
+    showToast('✓ Verbindung erfolgreich');
+    btn.textContent = '✓ OK';
+  } catch(e) {
+    showToast('Verbindung fehlgeschlagen: ' + e.message, true);
+    btn.textContent = 'Testen';
+  }
+  btn.disabled = false;
+}
+
+// ── Chat ─────────────────────────────────────────────────────────
+function openAIPanel() {
+  loadAICfg();
+  if (!isAIConfigured()) openAIOnboarding(false);
+  else openAIChat();
+}
+function openAIChat() {
+  loadAICfg();
+  const modal = document.getElementById('ai-chat-modal');
+  modal.classList.add('open');
+  document.getElementById('ai-provider-label').textContent =
+    aiCfg.provider === 'anthropic' ? 'Anthropic Claude' : 'Ollama (' + aiCfg.serverUrl + ')';
+  if (aiMessages.length === 0) {
+    aiMessages = [];
+    appendAIMessage('assistant',
+      'Hallo! Ich helfe dir beim Erstellen von IDS-Spezifikationen. 🏗\n\n' +
+      'Beschreibe einfach was du prüfen möchtest — zum Beispiel:\n' +
+      '• «Prüfe dass alle Wände einen Feuerwiderstand haben»\n' +
+      '• «Jedes Geschoss muss einen Namen haben»\n' +
+      '• «Keine Proxyelemente im Modell»\n\n' +
+      'Ich stelle Rückfragen wenn Angaben fehlen und erstelle die Spezifikation automatisch.'
+    );
+  }
+  setTimeout(() => document.getElementById('ai-input').focus(), 100);
+}
+function closeAIChat() { document.getElementById('ai-chat-modal').classList.remove('open'); }
+
+function appendAIMessage(role, content, isSpec) {
+  const body = document.getElementById('ai-chat-body');
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + role;
+  if (isSpec) {
+    div.innerHTML = `<div class="ai-avatar">${role==='assistant'?'✦':'👤'}</div>
+      <div class="ai-spec-preview"><strong>✅ Spezifikation erstellt:</strong>${content}</div>`;
+  } else {
+    div.innerHTML = `<div class="ai-avatar">${role==='assistant'?'✦':'👤'}</div>
+      <div class="ai-bubble">${content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`;
+  }
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = '44px';
+
+  appendAIMessage('user', text);
+  aiMessages.push({role:'user', content:text});
+
+  document.getElementById('ai-typing-indicator').style.display = '';
+  document.getElementById('ai-send-btn').disabled = true;
+
+  try {
+    const reply = await callAI(aiMessages);
+    document.getElementById('ai-typing-indicator').style.display = 'none';
+    document.getElementById('ai-send-btn').disabled = false;
+
+    aiMessages.push({role:'assistant', content:reply});
+    const parsed = parseAIResponse(reply);
+
+    if (parsed.type === 'spec') {
+      appendAIMessage('assistant', parsed.summary);
+      const specInfo = createSpecFromAI(parsed.spec);
+      appendAIMessage('assistant', specInfo, true);
+      aiMessages = []; // Reset nach erfolgreicher Spec
+    } else {
+      appendAIMessage('assistant', reply);
+    }
+  } catch(e) {
+    document.getElementById('ai-typing-indicator').style.display = 'none';
+    document.getElementById('ai-send-btn').disabled = false;
+    appendAIMessage('assistant', '⚠ Fehler: ' + e.message);
+  }
+}
+
+// ── API Call ─────────────────────────────────────────────────────
+async function callAI(messages, testOnly) {
+  const systemPrompt = buildSystemPrompt();
+  if (aiCfg.provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aiCfg.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: messages,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err?.error?.message || 'HTTP ' + res.status);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+  } else {
+    // Ollama
+    const res = await fetch(aiCfg.serverUrl + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3.1',
+        stream: false,
+        messages: [{ role:'system', content: systemPrompt }, ...messages],
+      }),
+    });
+    if (!res.ok) throw new Error('Ollama: HTTP ' + res.status);
+    const data = await res.json();
+    return data.message.content;
+  }
+}
+
+// ── System Prompt ────────────────────────────────────────────────
+function buildSystemPrompt() {
+  const userCtx = [
+    aiCfg.discipline  ? `- Disziplin: ${aiCfg.discipline}` : '',
+    `- IFC-Version: ${state.globalIfcVersion}`,
+    aiCfg.customPsets ? `- Eigene Property Sets:\n${aiCfg.customPsets.split('\n').map(l=>'  '+l).join('\n')}` : '',
+    aiCfg.siaPhasen   ? `- Relevante SIA-Phasen: ${aiCfg.siaPhasen}` : '',
+  ].filter(Boolean).join('\n');
+
+  return `Du bist ein IDS-Spezialist (Information Delivery Specification 1.0, buildingSMART).
+Deine Aufgabe: Nutzer beim Erstellen von IDS-Spezifikationen unterstützen.
+
+SPRACHE: Immer auf Deutsch antworten.
+
+VERHALTEN:
+- Wenn Pflichtfelder fehlen: stelle GENAU EINE gezielte Rückfrage, nie mehrere gleichzeitig
+- Sobald alle Informationen vorhanden: gib die Spezifikation als JSON aus
+- Erkläre kurz (1-2 Sätze) was die Spezifikation prüft
+
+FACETTEN UND PFLICHTFELDER:
+entity     → name (z.B. IFCWALL) [PFLICHT], predefinedType [optional]
+attribute  → name (z.B. Name, Description, Tag) [PFLICHT], value [optional], cardinality [standard: required]
+property   → pset (z.B. Pset_WallCommon) [PFLICHT], name [PFLICHT], dataType (z.B. IFCBOOLEAN) [PFLICHT wenn value], value [optional], cardinality [standard: required]
+classification → system (z.B. eBKP-H) [PFLICHT], value [optional], cardinality [standard: required]
+material   → value [optional], cardinality [standard: required]
+partof     → relation (z.B. IFCRELAGGREGATES) [PFLICHT], entity [optional]
+
+MINOCCURS / MAXOCCURS (Erwartete Anzahl):
+- "muss vorhanden sein" / "mindestens": minOccurs=1, maxOccurs="unbounded"
+- "genau einmal": minOccurs=1, maxOccurs=1
+- "darf nicht": minOccurs=0, maxOccurs=0
+- Standard wenn nicht angegeben: minOccurs=1, maxOccurs="unbounded"
+
+AUSGABEFORMAT — wenn alle Infos vorhanden, antworte MIT diesem Block:
+SPEC_START
+{
+  "name": "...",
+  "description": "...",
+  "minOccurs": "1",
+  "maxOccurs": "unbounded",
+  "applicability": [
+    {"type": "entity", "name": "IFCWALL"}
+  ],
+  "requirements": [
+    {"type": "property", "pset": "Pset_WallCommon", "name": "IsExternal", "dataType": "IFCBOOLEAN", "cardinality": "required"}
+  ]
+}
+SPEC_END
+
+NUTZERKONTEXT:
+${userCtx || '- (kein Kontext angegeben)'}`;
+}
+
+// ── Parse AI Response ────────────────────────────────────────────
+function parseAIResponse(text) {
+  const m = text.match(/SPEC_START\s*([\s\S]*?)\s*SPEC_END/);
+  if (!m) return { type: 'text' };
+  try {
+    const spec = JSON.parse(m[1]);
+    const summary = text.replace(/SPEC_START[\s\S]*?SPEC_END/, '').trim();
+    return { type: 'spec', spec, summary };
+  } catch(e) {
+    return { type: 'text' };
+  }
+}
+
+// ── Create Spec from AI JSON ─────────────────────────────────────
+function createSpecFromAI(json) {
+  const spec = {
+    name:         json.name || 'AI-Spezifikation',
+    identifier:   '',
+    description:  json.description || '',
+    instructions: '',
+    ifcVersion:   [state.globalIfcVersion],
+    minOccurs:    json.minOccurs ?? '1',
+    maxOccurs:    json.maxOccurs ?? 'unbounded',
+    applicability: (json.applicability || []).map(convertAIFacet),
+    requirements:  (json.requirements  || []).map(f => convertAIFacet(f, true)),
+  };
+  state.specs.push(spec);
+  renderSpecList();
+  showToast('✓ Spezifikation «' + spec.name + '» erstellt');
+
+  // Build info string for chat
+  const appSummary = spec.applicability.map(f => facetSummary(f)).join(', ');
+  const reqSummary = spec.requirements.map(f  => facetSummary(f)).join(', ');
+  return `<b>${esc(spec.name)}</b><br>
+    Anwendungsbereich: ${esc(appSummary)||'–'}<br>
+    Anforderungen: ${esc(reqSummary)||'–'}<br>
+    Anzahl: min ${spec.minOccurs}, max ${spec.maxOccurs}`;
+}
+
+function convertAIFacet(f, inReq) {
+  const base = { type: f.type };
+  if (f.type === 'entity') {
+    return { ...base, name: (f.name||'').toUpperCase(), predefinedType: f.predefinedType||'', value: null };
+  }
+  if (f.type === 'attribute') {
+    return { ...base, name: f.name||'', cardinality: f.cardinality||'required',
+      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+  }
+  if (f.type === 'property') {
+    return { ...base, pset: f.pset||'', name: f.name||'', dataType: f.dataType||'',
+      cardinality: f.cardinality||'required',
+      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+  }
+  if (f.type === 'classification') {
+    return { ...base, system: f.system||'', cardinality: f.cardinality||'required',
+      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+  }
+  if (f.type === 'material') {
+    return { ...base, cardinality: f.cardinality||'required',
+      value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
+  }
+  if (f.type === 'partof') {
+    return { ...base, relation: (f.relation||'').toUpperCase(),
+      entity: f.entity ? { name:(f.entity).toUpperCase() } : null };
+  }
+  return base;
+}
+
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('ai-input');
+  if (ta) {
+    ta.addEventListener('input', () => {
+      ta.style.height = '44px';
+      ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMessage(); }
+    });
+  }
+});
+
+loadAICfg();
 
 /* ── Init ──────────────────────────────────────────────────────── */
 document.getElementById('meta-date').value    = new Date().toISOString().split('T')[0];
