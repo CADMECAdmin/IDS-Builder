@@ -2418,7 +2418,7 @@ function obSave() {
   if (obStep === 1) {
     if (aiCfg.provider === 'anthropic') {
       aiCfg.apiKey = document.getElementById('ob-apikey').value.trim();
-      aiCfg.model  = document.getElementById('ob-model')?.value.trim() || 'claude-haiku-4-5';
+      // aiCfg.model wird automatisch durch testAIConnection() gesetzt
     } else {
       aiCfg.serverUrl = document.getElementById('ob-serverurl').value.trim() || 'http://localhost:11434';
     }
@@ -2480,14 +2480,11 @@ function renderObStep() {
             </p>
             <div class="ob-key-row">
               <input id="ob-apikey" type="password" placeholder="sk-ant-api03-…" value="${aiCfg.apiKey}" />
-              <button class="btn btn-secondary btn-sm" onclick="testAIConnection()">Testen</button>
+              <button class="btn btn-secondary btn-sm" id="ob-test-btn" onclick="testAIConnection()">Testen</button>
             </div>
             <div class="ob-hint">⚠ Der Key wird nur lokal in deinem Browser gespeichert. Niemand sonst hat Zugriff.</div>
-            <div style="margin-top:10px">
-              <label style="font-size:12px;font-weight:500;color:var(--c-muted);display:block;margin-bottom:4px">Modell
-                <span style="font-weight:400;color:var(--c-muted)"> — aktuelles Modell auf <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" style="color:var(--c-primary)">docs.anthropic.com/models</a></span>
-              </label>
-              <input id="ob-model" type="text" placeholder="claude-haiku-4-5" value="${aiCfg.model||'claude-haiku-4-5'}" style="width:100%;font-family:monospace;font-size:12px" />
+            <div id="ob-model-info" style="margin-top:8px;font-size:12px;color:var(--c-muted);min-height:18px">
+              ${aiCfg.model ? `✓ Modell erkannt: <code style="background:var(--c-bg);padding:1px 5px;border-radius:4px">${aiCfg.model}</code>` : 'Modell wird beim Testen automatisch erkannt.'}
             </div>
             <div style="margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px">
               <div style="font-weight:600;margin-bottom:6px;color:#92400e">💰 Kostenkontrolle empfohlen</div>
@@ -2547,17 +2544,48 @@ function renderObStep() {
   }
 }
 
+async function fetchBestAnthropicModel(apiKey) {
+  // Verfügbare Modelle abrufen und bestes Haiku-Modell wählen
+  const res = await fetch('https://api.anthropic.com/v1/models', {
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const models = (data.data || []).map(m => m.id);
+  // Präferenz: haiku (günstigste Option), sonst erstes verfügbares Modell
+  const haiku = models.find(id => id.toLowerCase().includes('haiku'));
+  return haiku || models[0] || 'claude-haiku-4-5';
+}
+
 async function testAIConnection() {
-  const btn = event.target;
+  const btn = document.getElementById('ob-test-btn') || event.target;
+  const modelInfo = document.getElementById('ob-model-info');
   btn.textContent = '…'; btn.disabled = true;
+  if (modelInfo) modelInfo.innerHTML = '<span style="color:var(--c-muted)">Modell wird erkannt…</span>';
   obSave();
+
   try {
+    // 1) Bestes Modell automatisch ermitteln (nur Anthropic)
+    if (aiCfg.provider === 'anthropic') {
+      const detected = await fetchBestAnthropicModel(aiCfg.apiKey);
+      if (detected) {
+        aiCfg.model = detected;
+        saveAICfg();
+        if (modelInfo) modelInfo.innerHTML =
+          `✓ Modell erkannt: <code style="background:var(--c-bg);padding:1px 5px;border-radius:4px">${detected}</code>`;
+      }
+    }
+    // 2) Verbindungstest mit gewähltem Modell
     await callAI([{role:'user',content:'Antworte nur mit: OK'}], true);
     showToast('✓ Verbindung erfolgreich');
     btn.textContent = '✓ OK';
   } catch(e) {
     btn.textContent = 'Testen';
-    // Benutzerfreundliche Fehlermeldungen je nach Fehlertyp
+    if (modelInfo) modelInfo.innerHTML = '<span style="color:#dc2626">Verbindung fehlgeschlagen</span>';
     const msg = e.message || '';
     if (msg.includes('credit') || msg.includes('balance') || msg.includes('billing')) {
       showToast('❌ Kein Guthaben — bitte unter console.anthropic.com/settings/billing Credits aufladen', true, 6000);
