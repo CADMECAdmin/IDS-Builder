@@ -740,6 +740,12 @@ body { background: var(--c-bg); min-height: 100vh; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Ergebnisse exportieren
         </button>
+        <button class="btn btn-ghost btn-sm" id="btn-checker-html" style="display:none">
+          📄 HTML-Bericht
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btn-checker-bcf" style="display:none">
+          🔗 BCF-Export
+        </button>
         <button class="btn btn-ghost btn-icon" id="checker-modal-close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -2496,6 +2502,8 @@ document.getElementById('checker-modal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeCheckerModal();
 });
 document.getElementById('btn-checker-export').onclick = exportCheckerResults;
+document.getElementById('btn-checker-html').onclick   = exportHTMLReport;
+document.getElementById('btn-checker-bcf').onclick    = exportBCFReport;
 
 // IFC file input
 document.getElementById('ifc-file-input').addEventListener('change', e => {
@@ -4367,10 +4375,14 @@ async function runIDSCheck() {
   const runBtn     = document.getElementById('btn-run-check');
   const resultsSection = document.getElementById('checker-results-section');
   const exportBtn  = document.getElementById('btn-checker-export');
+  const htmlBtn    = document.getElementById('btn-checker-html');
+  const bcfBtn     = document.getElementById('btn-checker-bcf');
 
   progress.classList.add('active');
   resultsSection.style.display = 'none';
   exportBtn.style.display = 'none';
+  htmlBtn.style.display   = 'none';
+  bcfBtn.style.display    = 'none';
   runBtn.disabled = true;
 
   function setProgress(pct, msg) {
@@ -4412,6 +4424,8 @@ async function runIDSCheck() {
     renderCheckerResults(results);
     resultsSection.style.display = '';
     exportBtn.style.display = '';
+    htmlBtn.style.display   = '';
+    bcfBtn.style.display    = '';
 
   } catch(e) {
     progress.classList.remove('active');
@@ -4542,6 +4556,388 @@ function exportCheckerResults() {
 function escChecker(s) {
   if (!s && s !== 0) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── HTML Report Export ────────────────────────────────────────── */
+function exportHTMLReport() {
+  if (!checkerState.results) return;
+  const { results, meta, ifcFile } = checkerState.results;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('de-CH', { year:'numeric', month:'2-digit', day:'2-digit' });
+  const timeStr = now.toLocaleTimeString('de-CH', { hour:'2-digit', minute:'2-digit' });
+  const totalSpecs   = results.length;
+  const passedSpecs  = results.filter(r => r.status === 'pass').length;
+  const totalElems   = results.reduce((s, r) => s + r.applicableCount, 0);
+  const failedElems  = results.reduce((s, r) => s + r.failCount, 0);
+  const idsTitle     = meta?.title || 'Ohne Titel';
+  const projectName  = meta?.description || meta?.title || 'IDS Prüfbericht';
+
+  function esc(s) {
+    if (!s && s !== 0) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let specsHTML = '';
+  for (const r of results) {
+    const color = r.status === 'pass' ? '#16a34a' : r.status === 'fail' ? '#dc2626' : '#64748b';
+    const bgColor = r.status === 'pass' ? '#f0fdf4' : r.status === 'fail' ? '#fef2f2' : '#f8fafc';
+    const borderColor = r.status === 'pass' ? '#bbf7d0' : r.status === 'fail' ? '#fecaca' : '#e2e8f0';
+    const statusLabel = r.status === 'pass' ? 'Bestanden' : r.status === 'fail' ? 'Fehlgeschlagen' : 'Nicht anwendbar';
+    const passInfo = r.status === 'not_applicable'
+      ? 'Keine anwendbaren Elemente gefunden'
+      : `${r.passCount} von ${r.applicableCount} Elementen bestanden`;
+
+    let failuresHTML = '';
+    if (r.failures && r.failures.length > 0) {
+      failuresHTML = '<div class="failures"><strong>Fehlgeschlagene Elemente:</strong><ul>';
+      for (const f of r.failures) {
+        const elemLabel = esc(f.name || f.globalId || String(f.elemId));
+        failuresHTML += `<li class="failure-item"><span class="elem-label">${esc(f.type)} – ${elemLabel}</span>`;
+        if (f.reasons && f.reasons.length > 0) {
+          failuresHTML += '<ul class="reasons">';
+          for (const reason of f.reasons) {
+            failuresHTML += `<li>${esc(reason)}</li>`;
+          }
+          failuresHTML += '</ul>';
+        }
+        failuresHTML += '</li>';
+      }
+      failuresHTML += '</ul></div>';
+    }
+
+    specsHTML += `
+    <div class="spec-box" style="border:1px solid ${borderColor};background:${bgColor};border-left:4px solid ${color}">
+      <div class="spec-header">
+        <span class="spec-name">${esc(r.specName)}</span>
+        <span class="status-badge" style="background:${color};color:#fff">${statusLabel}</span>
+      </div>
+      <div class="spec-info">${passInfo}</div>
+      ${failuresHTML}
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDS Prüfbericht – ${esc(idsTitle)}</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  line-height: 1.5;
+}
+.report-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.report-meta {
+  color: #64748b;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 4px 24px;
+  margin-top: 12px;
+}
+.report-meta .label { font-weight: 600; color: #334155; }
+.summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  text-align: center;
+}
+.summary-item .value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+  display: block;
+}
+.summary-item .label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.summary-item.highlight .value { color: #2563eb; }
+h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+.spec-box {
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  page-break-inside: avoid;
+}
+.spec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.spec-name { font-weight: 600; font-size: 14px; }
+.status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.spec-info { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+.failures { margin-top: 10px; }
+.failures > strong { font-size: 12px; display: block; margin-bottom: 6px; }
+.failures > ul { list-style: none; padding: 0; }
+.failure-item {
+  padding: 6px 0;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.elem-label { font-weight: 500; font-size: 12px; }
+.reasons {
+  list-style: disc;
+  padding-left: 20px;
+  margin-top: 3px;
+}
+.reasons li { font-size: 12px; color: #64748b; }
+.report-footer {
+  margin-top: 40px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+@media print {
+  body { max-width: 100%; padding: 0; }
+  .spec-box { page-break-inside: avoid; }
+  .summary { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="report-header">
+  <div class="report-title">IDS Prüfbericht</div>
+  <div class="report-meta">
+    <span class="label">Projekt:</span><span>${esc(projectName)}</span>
+    <span class="label">IFC-Datei:</span><span>${esc(ifcFile)}</span>
+    <span class="label">IDS-Titel:</span><span>${esc(idsTitle)}</span>
+    <span class="label">Datum/Uhrzeit:</span><span>${dateStr} ${timeStr}</span>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-item highlight">
+    <span class="value">${passedSpecs}/${totalSpecs}</span>
+    <span class="label">Spezifikationen bestanden</span>
+  </div>
+  <div class="summary-item">
+    <span class="value">${totalElems}</span>
+    <span class="label">Elemente geprüft</span>
+  </div>
+  <div class="summary-item">
+    <span class="value">${failedElems}</span>
+    <span class="label">Fehler</span>
+  </div>
+</div>
+
+<h2>Spezifikationen</h2>
+${specsHTML}
+
+<div class="report-footer">
+  Erstellt mit IDS-Builder · cadmec.ch · ${dateStr}
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'IDS-Pruefbericht-' + now.toISOString().slice(0,10) + '.html';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('✓ HTML-Bericht exportiert');
+}
+
+/* ── BCF 2.1 Export ────────────────────────────────────────────── */
+function newUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+let _crcTable = null;
+function calcCRC32(data) {
+  if (!_crcTable) {
+    _crcTable = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      _crcTable[i] = c;
+    }
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ _crcTable[(crc ^ data[i]) & 0xFF];
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function createZip(files) {
+  const enc = new TextEncoder();
+  const u16 = n => [n & 0xFF, (n >> 8) & 0xFF];
+  const u32 = n => [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF];
+
+  const now = new Date();
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+
+  const entries = [];
+  let offset = 0;
+
+  for (const { name, data } of files) {
+    const nb  = enc.encode(name);
+    const crc = calcCRC32(data);
+    const lh  = new Uint8Array([
+      0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ...u16(dosTime), ...u16(dosDate),
+      ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(nb.length), 0x00, 0x00, ...nb,
+    ]);
+    entries.push({ offset, lh, data, nb, crc });
+    offset += lh.length + data.length;
+  }
+
+  const cdStart = offset;
+  const cdParts = [];
+  for (const { offset: lo, data, nb, crc } of entries) {
+    cdParts.push(new Uint8Array([
+      0x50, 0x4B, 0x01, 0x02, 0x14, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ...u16(dosTime), ...u16(dosDate),
+      ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(nb.length), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ...u32(lo), ...nb,
+    ]));
+  }
+  const cdSize = cdParts.reduce((s, p) => s + p.length, 0);
+  const eocd   = new Uint8Array([
+    0x50, 0x4B, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00,
+    ...u16(entries.length), ...u16(entries.length),
+    ...u32(cdSize), ...u32(cdStart), 0x00, 0x00,
+  ]);
+
+  const total = entries.reduce((s, e) => s + e.lh.length + e.data.length, 0) + cdSize + eocd.length;
+  const out   = new Uint8Array(total);
+  let pos = 0;
+  for (const { lh, data } of entries) { out.set(lh, pos); pos += lh.length; out.set(data, pos); pos += data.length; }
+  for (const p of cdParts)            { out.set(p, pos);  pos += p.length; }
+  out.set(eocd, pos);
+  return out;
+}
+
+function exportBCFReport() {
+  if (!checkerState.results) return;
+  const { results } = checkerState.results;
+  const enc = new TextEncoder();
+  const isoNow = new Date().toISOString();
+
+  const failingResults = results.filter(r => r.status === 'fail' && r.failures && r.failures.length > 0);
+  if (failingResults.length === 0) {
+    showToast('Keine Fehler – BCF-Export nicht nötig');
+    return;
+  }
+
+  const files = [];
+
+  // bcf.version
+  const versionXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Version VersionId="2.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/buildingSMART/BCF-XML/master/Schemas/version.xsd">
+  <DetailedVersion>2.1</DetailedVersion>
+</Version>`;
+  files.push({ name: 'bcf.version', data: enc.encode(versionXml) });
+
+  function xmlEsc(s) {
+    if (!s && s !== 0) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+
+  for (const r of failingResults) {
+    for (const f of r.failures) {
+      const topicGuid = newUUID();
+      const vpGuid    = newUUID();
+      const elemLabel = f.name || f.globalId || String(f.elemId);
+      const title     = `${r.specName}: ${f.type} ${elemLabel}`;
+      const description = (f.reasons || []).join('\n');
+      const hasGuid   = f.globalId && f.globalId.trim().length > 0;
+
+      const viewpointsBlock = hasGuid
+        ? `  <Viewpoints Guid="${vpGuid}">
+    <Viewpoint>viewpoint.bcfv</Viewpoint>
+  </Viewpoints>`
+        : '';
+
+      const markupXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Markup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/buildingSMART/BCF-XML/master/Schemas/markup.xsd">
+  <Topic Guid="${topicGuid}" TopicType="Issue" TopicStatus="Open">
+    <Title>${xmlEsc(title)}</Title>
+    <Description>${xmlEsc(description)}</Description>
+    <CreationDate>${isoNow}</CreationDate>
+    <CreationAuthor>IDS-Builder</CreationAuthor>
+    <Labels>IDS</Labels>
+  </Topic>
+${viewpointsBlock}
+</Markup>`;
+      files.push({ name: `${topicGuid}/markup.bcf`, data: enc.encode(markupXml) });
+
+      if (hasGuid) {
+        const viewpointXml = `<?xml version="1.0" encoding="UTF-8"?>
+<VisualizationInfo Guid="${vpGuid}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/buildingSMART/BCF-XML/master/Schemas/visinfo.xsd">
+  <Components>
+    <Selection>
+      <Component IfcGuid="${xmlEsc(f.globalId)}">
+        <OriginatingSystem>IDS-Builder</OriginatingSystem>
+      </Component>
+    </Selection>
+    <Coloring>
+      <Color Color="FF0000">
+        <Component IfcGuid="${xmlEsc(f.globalId)}"/>
+      </Color>
+    </Coloring>
+  </Components>
+</VisualizationInfo>`;
+        files.push({ name: `${topicGuid}/viewpoint.bcfv`, data: enc.encode(viewpointXml) });
+      }
+    }
+  }
+
+  const zipData = createZip(files);
+  const blob = new Blob([zipData], { type: 'application/zip' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'IDS-Pruefergebnis.bcf';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(a.href);
+  const topicCount = files.filter(f => f.name.endsWith('markup.bcf')).length;
+  showToast(`✓ BCF exportiert (${topicCount} Issues)`);
 }
 
 /* ── Init ──────────────────────────────────────────────────────── */
