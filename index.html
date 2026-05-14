@@ -2242,6 +2242,7 @@ function _fallbackDownload(blob, filename) {
 async function saveIDS() {
   const m = getMeta();
   if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
+  trackIDSSaved();
   const blob = _xmlBlob();
   if (state.fileHandle) {
     try {
@@ -2266,6 +2267,7 @@ async function saveIDS() {
 async function exportIDS() {
   const m = getMeta();
   if (!m.title.trim()) { showToast('Bitte Titel eingeben', true); return; }
+  trackIDSSaved();
   const blob = _xmlBlob();
   const suggestedName = (m.title||'ids').replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/_+/g,'_')+'.ids';
   if (window.showSaveFilePicker) {
@@ -2398,24 +2400,44 @@ function trackUsage(inputTok, outputTok) {
   s.model = aiCfg.model; // Modell beim letzten Call merken
   localStorage.setItem('ids_ai_usage', JSON.stringify(s));
 }
+function calcTotalCost(s) {
+  const p = getModelPricing(s.model || aiCfg.model);
+  return ((s.totalInput || 0) / 1e6) * p.input + ((s.totalOutput || 0) / 1e6) * p.output;
+}
 function trackSpecCreated() {
   const s = getUsageStats();
   s.totalSpecs = (s.totalSpecs || 0) + 1;
-  // Kosten bis jetzt durch Anzahl Specs = Ø pro Spec
   if (s.totalInput || s.totalOutput) {
-    const p = getModelPricing(s.model || aiCfg.model);
-    s.avgCostPerSpec = ((s.totalInput / 1e6) * p.input + (s.totalOutput / 1e6) * p.output)
-                       / s.totalSpecs;
+    s.avgCostPerSpec = calcTotalCost(s) / s.totalSpecs;
+  }
+  localStorage.setItem('ids_ai_usage', JSON.stringify(s));
+}
+function trackIDSSaved() {
+  // Wird beim Export/Speichern aufgerufen — nur wenn AI im Einsatz war
+  const s = getUsageStats();
+  if (!s.totalSpecs) return; // noch keine AI-Spezifikationen erstellt
+  const aiSpecsThisIDS = (s.totalSpecs || 0) - (s.specsAtLastSave || 0);
+  if (aiSpecsThisIDS <= 0) return; // keine neuen AI-Specs seit letztem Save
+  s.totalIDS       = (s.totalIDS       || 0) + 1;
+  s.totalSpecsInIDS = (s.totalSpecsInIDS || 0) + aiSpecsThisIDS;
+  s.specsAtLastSave = s.totalSpecs;
+  s.avgSpecsPerIDS  = s.totalSpecsInIDS / s.totalIDS;
+  if (s.avgCostPerSpec != null) {
+    s.avgCostPerIDS = s.avgCostPerSpec * s.avgSpecsPerIDS;
   }
   localStorage.setItem('ids_ai_usage', JSON.stringify(s));
 }
 function aiCostDescription() {
   const s = getUsageStats();
-  if (s.totalSpecs > 0 && s.avgCostPerSpec != null) {
-    const cents = (s.avgCostPerSpec * 100).toFixed(2);
-    return `Kosten trägt jeder Nutzer selbst (Ø ~$${(s.avgCostPerSpec).toFixed(3)} pro Spezifikation, basierend auf ${s.totalSpecs} erstellten Spezifikationen).`;
-  }
-  return 'Kosten trägt jeder Nutzer selbst (abhängig von Modell und Gesprächslänge).';
+  if (!s.totalSpecs) return 'Kosten trägt jeder Nutzer selbst (abhängig von Modell und Gesprächslänge).';
+  const parts = [];
+  if (s.avgCostPerSpec != null)
+    parts.push(`Ø ~$${s.avgCostPerSpec.toFixed(3)} pro Spezifikation (${s.totalSpecs} erstellt)`);
+  if (s.avgCostPerIDS != null)
+    parts.push(`Ø ~$${s.avgCostPerIDS.toFixed(3)} pro IDS (${s.totalIDS} exportiert, Ø ${s.avgSpecsPerIDS.toFixed(1)} Spez.)`);
+  return parts.length
+    ? `Kosten trägt jeder Nutzer selbst — ${parts.join(' · ')}.`
+    : 'Kosten trägt jeder Nutzer selbst (abhängig von Modell und Gesprächslänge).';
 }
 
 function loadAICfg() {
