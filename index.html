@@ -453,6 +453,15 @@ body { background: var(--c-bg); min-height: 100vh; }
           <label>Beschreibung</label>
           <input id="spec-description" placeholder="Kurze Beschreibung der Spezifikation. Was wird geprüft?" />
         </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="spec-status">
+            <option value="">— kein Status —</option>
+            <option value="Neu">Neu</option>
+            <option value="Bestand">Bestand</option>
+            <option value="Test">Test</option>
+          </select>
+        </div>
 
         <!-- IFC Version: global, nur Hinweis -->
         <div class="form-group full">
@@ -1114,7 +1123,7 @@ function setFileHandle(handle) {
 
 function newSpec() {
   return {
-    name:'', identifier:'', description:'', instructions:'',
+    name:'', identifier:'', description:'', status:'', instructions:'',
     ifcVersion: [state.globalIfcVersion],
     minOccurs: 0, maxOccurs: 'unbounded',
     applicability:[], requirements:[],
@@ -1627,7 +1636,10 @@ function renderSpecList() {
       <div class="spec-card-header" onclick="toggleCard(${i})">
         <div class="spec-index">${i+1}</div>
         <div class="spec-title">
-          <div class="spec-name">${esc(s.name)||'<em style="color:var(--c-muted)">Ohne Titel</em>'}</div>
+          <div class="spec-name">
+            ${esc(s.name)||'<em style="color:var(--c-muted)">Ohne Titel</em>'}
+            ${s.status ? `<span style="margin-left:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:${s.status==='Neu'?'#dbeafe':s.status==='Bestand'?'#dcfce7':'#fef9c3'};color:${s.status==='Neu'?'#1d4ed8':s.status==='Bestand'?'#15803d':'#854d0e'}">${esc(s.status)}</span>` : ''}
+          </div>
           <div class="spec-meta">${s.identifier?s.identifier+' · ':''}${s.applicability.length} Anwendungsbereich · ${s.requirements.length} Anforderungen</div>
         </div>
         <div class="spec-actions" onclick="event.stopPropagation()">
@@ -1668,6 +1680,7 @@ function openSpecModal(idx) {
   document.getElementById('spec-name').value         = state.editSpec.name;
   document.getElementById('spec-identifier').value   = state.editSpec.identifier||'';
   document.getElementById('spec-description').value  = state.editSpec.description||'';
+  document.getElementById('spec-status').value       = state.editSpec.status||'';
   document.getElementById('spec-instructions').value = state.editSpec.instructions||'';
 
   // Show global IFC version in modal hint
@@ -1694,6 +1707,7 @@ function saveSpec() {
   state.editSpec.name         = name;
   state.editSpec.identifier   = document.getElementById('spec-identifier').value.trim();
   state.editSpec.description  = document.getElementById('spec-description').value.trim();
+  state.editSpec.status       = document.getElementById('spec-status').value;
   state.editSpec.instructions = document.getElementById('spec-instructions').value.trim();
   // IFC version is global — stored per-spec for XML compliance
   state.editSpec.ifcVersion   = [state.globalIfcVersion];
