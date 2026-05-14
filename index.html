@@ -2839,11 +2839,25 @@ Pumpe                                 → IFCPUMP
 Lüfter / Ventilator                   → IFCFAN
 Boiler / Kessel / Wassererwärmer      → IFCBOILER
 Kühlaggregat / Kältemaschine          → IFCCHILLER
-Sanitäreinrichtung / WC / Waschbecken / Dusche / Badewanne → IFCSANITARYTERMINAL
-Steckdose / Auslass                   → IFCOUTLET
-Schalter / Taster                     → IFCSWITCHINGDEVICE
-Sensor / Fühler / Melder              → IFCSENSOR
+Sanitäreinrichtung (allgemein)         → IFCSANITARYTERMINAL
+Waschbecken / Lavabo                  → IFCSANITARYTERMINAL  predefinedType: WASHHANDBASIN
+WC / Toilette / Klosett               → IFCSANITARYTERMINAL  predefinedType: TOILETPAN
+Dusche / Duschwanne                   → IFCSANITARYTERMINAL  predefinedType: SHOWER
+Badewanne                             → IFCSANITARYTERMINAL  predefinedType: BATH
+Urinal                                → IFCSANITARYTERMINAL  predefinedType: URINAL
+Ausgussbecken / Spüle (Küche)         → IFCSANITARYTERMINAL  predefinedType: SINK
+Steckdose / Auslass (Elektro)         → IFCOUTLET  predefinedType: POWEROUTLET
+Datenanschluss / RJ45                 → IFCOUTLET  predefinedType: DATAOUTLET
+Schalter / Taster (Elektro)           → IFCSWITCHINGDEVICE  predefinedType: TOGGLESWITCH
+Temperatursensor / Thermostat         → IFCSENSOR  predefinedType: TEMPERATURESENSOR
+Bewegungsmelder                       → IFCSENSOR  predefinedType: MOTIONSENSOR
+Rauchmelder / Brandmelder             → IFCSENSOR  predefinedType: SMOKESENSOR
 Möbel / Einrichtung                   → IFCFURNITURE
+Heizkörper / Radiator                 → IFCSPACEHEATER  predefinedType: RADIATOR
+Kühldecke / Bauteilaktivierung        → IFCSPACEHEATER  predefinedType: PANEL
+Leuchte / Lampe / Beleuchtung         → IFCLIGHTFIXTURE
+Aufzug / Lift                         → IFCTRANSPORTELEMENT  predefinedType: ELEVATOR
+Rolltreppe                            → IFCTRANSPORTELEMENT  predefinedType: ESCALATOR
 
 HÄUFIGE STANDARD-PSETS (wenn passend automatisch vorschlagen):
 IFCWALL       → Pset_WallCommon      (IsExternal:BOOL, LoadBearing:BOOL, FireRating:TEXT, AcousticRating:TEXT, ThermalTransmittance:REAL)
