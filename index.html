@@ -3112,8 +3112,12 @@ function convertAIFacet(f, inReq) {
       value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
   }
   if (f.type === 'property') {
-    return { ...base, pset: f.pset||'', name: f.name||'', dataType: f.dataType||'',
-      cardinality: f.cardinality||'required',
+    return { ...base,
+      propertySet: f.pset || f.propertySet || '',   // AI liefert 'pset', Builder nutzt 'propertySet'
+      baseName:    f.name || f.baseName    || '',   // AI liefert 'name', Builder nutzt 'baseName'
+      dataType:    f.dataType || '',
+      uri:         f.uri || '',
+      cardinality: f.cardinality || 'required',
       value: f.value ? { type:'simple', simpleValue: String(f.value) } : null };
   }
   if (f.type === 'classification') {
