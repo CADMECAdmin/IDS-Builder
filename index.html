@@ -2376,6 +2376,48 @@ let aiCfg = {
 };
 let aiMessages = [];
 
+// ── Usage Tracking ────────────────────────────────────────────────
+// Approximate prices per million tokens (Anthropic, stand Mai 2025)
+const AI_MODEL_PRICING = [
+  { match: 'opus',   input: 15.0, output: 75.0  },
+  { match: 'sonnet', input:  3.0, output: 15.0  },
+  { match: 'haiku',  input:  0.8, output:  4.0  },
+];
+function getModelPricing(modelId) {
+  const id = (modelId || '').toLowerCase();
+  return AI_MODEL_PRICING.find(p => id.includes(p.match)) || { input: 3.0, output: 15.0 };
+}
+function getUsageStats() {
+  try { return JSON.parse(localStorage.getItem('ids_ai_usage')) || {}; } catch { return {}; }
+}
+function trackUsage(inputTok, outputTok) {
+  const s = getUsageStats();
+  s.totalInput  = (s.totalInput  || 0) + (inputTok  || 0);
+  s.totalOutput = (s.totalOutput || 0) + (outputTok || 0);
+  s.totalCalls  = (s.totalCalls  || 0) + 1;
+  s.model = aiCfg.model; // Modell beim letzten Call merken
+  localStorage.setItem('ids_ai_usage', JSON.stringify(s));
+}
+function trackSpecCreated() {
+  const s = getUsageStats();
+  s.totalSpecs = (s.totalSpecs || 0) + 1;
+  // Kosten bis jetzt durch Anzahl Specs = Ø pro Spec
+  if (s.totalInput || s.totalOutput) {
+    const p = getModelPricing(s.model || aiCfg.model);
+    s.avgCostPerSpec = ((s.totalInput / 1e6) * p.input + (s.totalOutput / 1e6) * p.output)
+                       / s.totalSpecs;
+  }
+  localStorage.setItem('ids_ai_usage', JSON.stringify(s));
+}
+function aiCostDescription() {
+  const s = getUsageStats();
+  if (s.totalSpecs > 0 && s.avgCostPerSpec != null) {
+    const cents = (s.avgCostPerSpec * 100).toFixed(2);
+    return `Kosten trägt jeder Nutzer selbst (Ø ~$${(s.avgCostPerSpec).toFixed(3)} pro Spezifikation, basierend auf ${s.totalSpecs} erstellten Spezifikationen).`;
+  }
+  return 'Kosten trägt jeder Nutzer selbst (abhängig von Modell und Gesprächslänge).';
+}
+
 function loadAICfg() {
   const s = localStorage.getItem('ids_ai_cfg');
   if (s) try { aiCfg = { ...aiCfg, ...JSON.parse(s) }; } catch(e) {}
@@ -2452,7 +2494,7 @@ function renderObStep() {
           <input type="radio" name="ob-provider" value="anthropic" ${aiCfg.provider==='anthropic'?'checked':''} style="margin-top:2px" onchange="aiCfg.provider='anthropic';renderObStep()">
           <div>
             <div style="font-weight:600;font-size:13px">Anthropic Claude <span style="font-size:11px;color:var(--c-muted);font-weight:400">(Cloud)</span></div>
-            <div style="font-size:12px;color:var(--c-muted);margin-top:2px">Einfach einzurichten, benötigt Internet. Kosten trägt jeder Nutzer selbst (~$0.01 pro Spezifikation).</div>
+            <div style="font-size:12px;color:var(--c-muted);margin-top:2px">Einfach einzurichten, benötigt Internet. ${aiCostDescription()}</div>
           </div>
         </label>
         <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;border:2px solid var(--c-border);border-radius:8px;cursor:pointer;transition:border-color .15s"
@@ -2719,6 +2761,7 @@ async function callAI(messages, testOnly) {
       throw new Error((errType ? errType + ': ' : '') + (errMsg || 'HTTP ' + res.status));
     }
     const data = await res.json();
+    if (!testOnly && data.usage) trackUsage(data.usage.input_tokens, data.usage.output_tokens);
     return data.content[0].text;
   } else {
     // Ollama
@@ -2818,6 +2861,7 @@ function createSpecFromAI(json) {
   };
   state.specs.push(spec);
   renderSpecList();
+  trackSpecCreated(); // Nutzungsstatistik aktualisieren
   showToast('✓ Spezifikation «' + spec.name + '» erstellt');
 
   // Build info string for chat
