@@ -2727,41 +2727,159 @@ async function sendAIMessage() {
   }
 }
 
+// ── bSDD Integration ─────────────────────────────────────────────
+// IFC class names (uppercase) → bSDD PascalCase (für URI-Aufbau)
+const IFC_PASCAL = {
+  IFCWALL:'IfcWall', IFCWALLSTANDARDCASE:'IfcWallStandardCase',
+  IFCCURTAINWALL:'IfcCurtainWall', IFCSLAB:'IfcSlab',
+  IFCSLABSTANDARDCASE:'IfcSlabStandardCase', IFCCOLUMN:'IfcColumn',
+  IFCBEAM:'IfcBeam', IFCMEMBER:'IfcMember', IFCPLATE:'IfcPlate',
+  IFCDOOR:'IfcDoor', IFCWINDOW:'IfcWindow', IFCROOF:'IfcRoof',
+  IFCSTAIR:'IfcStair', IFCSTAIRFLIGHT:'IfcStairFlight',
+  IFCRAMP:'IfcRamp', IFCRAMPFLIGHT:'IfcRampFlight',
+  IFCRAILING:'IfcRailing', IFCSHADINGDEVICE:'IfcShadingDevice',
+  IFCCOVERING:'IfcCovering', IFCFOOTING:'IfcFooting', IFCPILE:'IfcPile',
+  IFCSPACE:'IfcSpace', IFCBUILDINGSTOREY:'IfcBuildingStorey',
+  IFCBUILDING:'IfcBuilding', IFCSITE:'IfcSite', IFCPROJECT:'IfcProject',
+  IFCOPENINGELEMENT:'IfcOpeningElement',
+  IFCBUILDINGELEMENTPROXY:'IfcBuildingElementProxy',
+  IFCSANITARYTERMINAL:'IfcSanitaryTerminal',
+  IFCFURNITURE:'IfcFurniture', IFCLIGHTFIXTURE:'IfcLightFixture',
+  IFCSPACEHEATER:'IfcSpaceHeater',
+  IFCTRANSPORTELEMENT:'IfcTransportElement',
+  IFCPIPESEGMENT:'IfcPipeSegment', IFCDUCTSEGMENT:'IfcDuctSegment',
+  IFCCABLESEGMENT:'IfcCableSegment', IFCVALVE:'IfcValve',
+  IFCDAMPER:'IfcDamper', IFCPUMP:'IfcPump', IFCFAN:'IfcFan',
+  IFCBOILER:'IfcBoiler', IFCCHILLER:'IfcChiller',
+  IFCOUTLET:'IfcOutlet', IFCSWITCHINGDEVICE:'IfcSwitchingDevice',
+  IFCSENSOR:'IfcSensor', IFCREINFORCINGBAR:'IfcReinforcingBar',
+  IFCREINFORCINGMESH:'IfcReinforcingMesh', IFCCHIMNEY:'IfcChimney',
+};
+
+async function bsddLookupClass(ifcClass) {
+  const pascal = IFC_PASCAL[ifcClass.toUpperCase()];
+  if (!pascal) return { error: `Keine bSDD-URI für ${ifcClass} bekannt` };
+  // IFC4X3_ADD2 → ifc-4.3, IFC4 → ifc-4.0, IFC2X3 → ifc-2x3
+  const ver = state.globalIfcVersion === 'IFC2X3' ? 'ifc-2x3'
+            : state.globalIfcVersion === 'IFC4'    ? 'ifc-4.0'
+            : 'ifc-4.3';
+  const uri = `https://identifier.buildingsmart.org/uri/buildingsmart/${ver}/class/${pascal}`;
+  try {
+    const res = await fetch(
+      `https://api.bsdd.buildingsmart.org/api/Class/v1?Uri=${encodeURIComponent(uri)}&includeClassProperties=true&languageCode=de`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return { error: `bSDD HTTP ${res.status}` };
+    const data = await res.json();
+    // Kompaktes Format für den System-Prompt aufbereiten
+    const predTypes = (data.classRelations || [])
+      .filter(r => r.relationType === 'HasMaterial' || r.classUri?.includes('PREDEFINED'))
+      .map(r => r.relatedClassName);
+    // PredefinedTypes aus dem Enum-Feld (wenn vorhanden)
+    const pts = data.predefinedType
+      ? [data.predefinedType]
+      : (data.classProperties || [])
+          .filter(p => p.name === 'PredefinedType')
+          .flatMap(p => p.allowedValues?.map(v => v.value) || []);
+    const props = (data.classProperties || []).map(p =>
+      `  ${p.name} (${p.dataType || '?'})${p.description ? ' — ' + p.description : ''}`
+    );
+    return {
+      class:          data.name || pascal,
+      uri:            uri,
+      predefinedTypes: pts.length ? pts : ['(keine expliziten PredefinedTypes in bSDD)'],
+      properties:     props.length ? props : ['(keine Properties in bSDD gefunden)'],
+    };
+  } catch(e) {
+    return { error: `bSDD-Abfrage fehlgeschlagen: ${e.message}` };
+  }
+}
+
+// Tool-Definition für Anthropic Tool Use
+const AI_TOOLS = [
+  {
+    name: 'lookup_ifc_class',
+    description: 'Schlägt eine IFC-Klasse in bSDD (buildingSMART Data Dictionary) nach. Gibt offizielle PredefinedTypes und verfügbare Properties mit Datentypen zurück. Verwende dieses Tool wenn du die genauen PredefinedTypes oder Properties einer IFC-Klasse brauchst.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ifc_class: {
+          type: 'string',
+          description: 'IFC-Klassenname in Grossbuchstaben, z.B. IFCWALL oder IFCSANITARYTERMINAL',
+        },
+      },
+      required: ['ifc_class'],
+    },
+  },
+];
+
 // ── API Call ─────────────────────────────────────────────────────
 async function callAI(messages, testOnly) {
   const systemPrompt = buildSystemPrompt();
   if (aiCfg.provider === 'anthropic') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': aiCfg.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: aiCfg.model || 'claude-sonnet-4-5',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: messages,
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      const errType = err?.error?.type || '';
-      const errMsg  = err?.error?.message || '';
-      // Anthropic-spezifische Fehlertypen mappen
-      if (errType === 'authentication_error')   throw new Error('invalid API key (401)');
-      if (errType === 'credit_balance_too_low') throw new Error('credit balance too low — bitte Guthaben aufladen');
-      if (errType === 'permission_error')       throw new Error('permission denied (403) — kein Guthaben oder Konto nicht freigeschaltet');
-      if (errType === 'not_found_error')        throw new Error('model not available (404) — Konto evtl. ohne Guthaben');
-      throw new Error((errType ? errType + ': ' : '') + (errMsg || 'HTTP ' + res.status));
+    // Tool-Use-Schleife: max. 4 Runden (AI → Tool → AI → ...)
+    let currentMessages = [...messages];
+    let totalUsage = { input_tokens: 0, output_tokens: 0 };
+    for (let round = 0; round < 4; round++) {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': aiCfg.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: aiCfg.model || 'claude-sonnet-4-5',
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: currentMessages,
+          tools: testOnly ? undefined : AI_TOOLS,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        const errType = err?.error?.type || '';
+        const errMsg  = err?.error?.message || '';
+        if (errType === 'authentication_error')   throw new Error('invalid API key (401)');
+        if (errType === 'credit_balance_too_low') throw new Error('credit balance too low — bitte Guthaben aufladen');
+        if (errType === 'permission_error')       throw new Error('permission denied (403) — kein Guthaben oder Konto nicht freigeschaltet');
+        if (errType === 'not_found_error')        throw new Error('model not available (404) — Konto evtl. ohne Guthaben');
+        throw new Error((errType ? errType + ': ' : '') + (errMsg || 'HTTP ' + res.status));
+      }
+      const data = await res.json();
+      if (data.usage) {
+        totalUsage.input_tokens  += data.usage.input_tokens  || 0;
+        totalUsage.output_tokens += data.usage.output_tokens || 0;
+      }
+      // Kein Tool-Aufruf → fertig
+      if (data.stop_reason !== 'tool_use') {
+        if (!testOnly) trackUsage(totalUsage.input_tokens, totalUsage.output_tokens);
+        const textBlock = data.content.find(b => b.type === 'text');
+        return textBlock?.text || '';
+      }
+      // Tool-Aufruf verarbeiten
+      const toolUseBlock = data.content.find(b => b.type === 'tool_use');
+      if (!toolUseBlock) break;
+      // bSDD abfragen
+      const bsddResult = await bsddLookupClass(toolUseBlock.input.ifc_class || '');
+      // Nachrichten um Assistant-Antwort + Tool-Ergebnis erweitern
+      currentMessages = [
+        ...currentMessages,
+        { role: 'assistant', content: data.content },
+        {
+          role: 'user',
+          content: [{
+            type: 'tool_result',
+            tool_use_id: toolUseBlock.id,
+            content: JSON.stringify(bsddResult),
+          }],
+        },
+      ];
     }
-    const data = await res.json();
-    if (!testOnly && data.usage) trackUsage(data.usage.input_tokens, data.usage.output_tokens);
-    return data.content[0].text;
+    throw new Error('Maximale Tool-Runden erreicht');
   } else {
-    // Ollama
+    // Ollama (kein Tool Use)
     const res = await fetch(aiCfg.serverUrl + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2792,6 +2910,7 @@ VERHALTEN:
 - Wenn Pflichtfelder fehlen: stelle GENAU EINE gezielte Rückfrage, nie mehrere gleichzeitig
 - Sobald alle Informationen vorhanden: gib die Spezifikation als JSON aus
 - Erkläre kurz (1-2 Sätze) was die Spezifikation prüft
+- Verwende das Tool lookup_ifc_class wenn du PredefinedTypes oder Properties einer IFC-Klasse nachschlagen musst — verlasse dich nicht auf Vermutungen
 
 FACETTEN UND PFLICHTFELDER:
 entity         → name (z.B. IFCWALL) [PFLICHT], predefinedType [optional]
