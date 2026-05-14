@@ -1599,13 +1599,13 @@ function getMeta() {
 }
 
 let toastTimer;
-function showToast(msg, isErr=false) {
+function showToast(msg, isErr=false, duration=3500) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.background = isErr ? '#dc2626' : '#1e293b';
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2466,11 +2466,12 @@ function renderObStep() {
           <div>
             <div style="font-weight:600;font-size:13px;margin-bottom:8px">Anthropic API-Key</div>
             <p style="font-size:12px;color:var(--c-muted);margin-bottom:12px">
-              So erhältst du einen API-Key:<br><br>
+              So richtest du die API ein:<br><br>
               1. Öffne <a href="https://console.anthropic.com" target="_blank" style="color:var(--c-primary)">console.anthropic.com</a><br>
               2. Konto erstellen oder einloggen<br>
-              3. Links auf «API Keys» → «Create Key»<br>
-              4. Key kopieren und hier einfügen
+              3. <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#d97706;font-weight:500">Einstellungen → Billing</a> → Zahlungsmethode + Guthaben hinzufügen <strong style="color:#d97706">(Pflicht!)</strong><br>
+              4. Links auf «API Keys» → «Create Key»<br>
+              5. Key kopieren und hier einfügen
             </p>
             <div class="ob-key-row">
               <input id="ob-apikey" type="password" placeholder="sk-ant-api03-…" value="${aiCfg.apiKey}" />
@@ -2544,8 +2545,22 @@ async function testAIConnection() {
     showToast('✓ Verbindung erfolgreich');
     btn.textContent = '✓ OK';
   } catch(e) {
-    showToast('Verbindung fehlgeschlagen: ' + e.message, true);
     btn.textContent = 'Testen';
+    // Benutzerfreundliche Fehlermeldungen je nach Fehlertyp
+    const msg = e.message || '';
+    if (msg.includes('credit') || msg.includes('balance') || msg.includes('billing')) {
+      showToast('❌ Kein Guthaben — bitte unter console.anthropic.com/settings/billing Credits aufladen', true, 6000);
+    } else if (msg.includes('auth') || msg.includes('invalid') || msg.includes('API key') || msg.includes('401')) {
+      showToast('❌ Ungültiger API-Key — bitte Key prüfen', true, 5000);
+    } else if (msg.includes('permission') || msg.includes('403')) {
+      showToast('❌ Zugriff verweigert — Konto evtl. nicht freigeschaltet oder kein Guthaben', true, 6000);
+    } else if (msg.includes('model') || msg.includes('404')) {
+      showToast('❌ Modell nicht verfügbar — Konto hat möglicherweise kein Guthaben (console.anthropic.com/settings/billing)', true, 7000);
+    } else if (msg.includes('CORS') || msg.includes('network') || msg.includes('fetch')) {
+      showToast('❌ Netzwerkfehler — Verbindung zu api.anthropic.com nicht möglich', true, 5000);
+    } else {
+      showToast('❌ Verbindung fehlgeschlagen: ' + msg, true, 5000);
+    }
   }
   btn.disabled = false;
 }
@@ -2649,7 +2664,14 @@ async function callAI(messages, testOnly) {
     });
     if (!res.ok) {
       const err = await res.json().catch(()=>({}));
-      throw new Error(err?.error?.message || 'HTTP ' + res.status);
+      const errType = err?.error?.type || '';
+      const errMsg  = err?.error?.message || '';
+      // Anthropic-spezifische Fehlertypen mappen
+      if (errType === 'authentication_error')   throw new Error('invalid API key (401)');
+      if (errType === 'credit_balance_too_low') throw new Error('credit balance too low — bitte Guthaben aufladen');
+      if (errType === 'permission_error')       throw new Error('permission denied (403) — kein Guthaben oder Konto nicht freigeschaltet');
+      if (errType === 'not_found_error')        throw new Error('model not available (404) — Konto evtl. ohne Guthaben');
+      throw new Error((errType ? errType + ': ' : '') + (errMsg || 'HTTP ' + res.status));
     }
     const data = await res.json();
     return data.content[0].text;
