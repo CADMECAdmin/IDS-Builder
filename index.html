@@ -2477,6 +2477,21 @@ function renderObStep() {
               <button class="btn btn-secondary btn-sm" onclick="testAIConnection()">Testen</button>
             </div>
             <div class="ob-hint">⚠ Der Key wird nur lokal in deinem Browser gespeichert. Niemand sonst hat Zugriff.</div>
+            <div style="margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px">
+              <div style="font-weight:600;margin-bottom:6px;color:#92400e">💰 Kostenkontrolle empfohlen</div>
+              <p style="color:#78350f;margin-bottom:8px">
+                Die API-Nutzung wird dir direkt von Anthropic verrechnet (~$0.01 pro Spezifikation).
+                Setze ein monatliches Ausgabenlimit, um unerwartete Kosten zu vermeiden:
+              </p>
+              <ol style="color:#78350f;margin:0 0 8px 16px;line-height:1.7">
+                <li>Öffne <a href="https://console.anthropic.com/settings/limits" target="_blank" style="color:var(--c-primary);font-weight:500">console.anthropic.com/settings/limits</a></li>
+                <li>Unter «Usage limits» ein monatliches <strong>Maximum</strong> setzen (z.B. $5)</li>
+                <li>Optional: E-Mail-Warnung bei einem niedrigeren Schwellenwert aktivieren</li>
+              </ol>
+              <div style="color:#92400e;font-size:11px">
+                ℹ Ohne Limit gilt das Standard-Kontolimit von Anthropic. Ein selbst gesetztes Limit schützt dich zusätzlich.
+              </div>
+            </div>
           </div>
         </div>`;
     } else {
