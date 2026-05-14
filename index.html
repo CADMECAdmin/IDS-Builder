@@ -2795,11 +2795,51 @@ async function bsddLookupClass(ifcClass) {
   }
 }
 
+async function bsddSearchEntity(searchTerm) {
+  // Sucht in bSDD nach IFC-Klassen anhand eines (englischen) Begriffs
+  const ver = state.globalIfcVersion === 'IFC2X3' ? 'ifc-2x3'
+            : state.globalIfcVersion === 'IFC4'    ? 'ifc-4.0'
+            : 'ifc-4.3';
+  const dictUri = `https://identifier.buildingsmart.org/uri/buildingsmart/${ver}`;
+  try {
+    const res = await fetch(
+      `https://api.bsdd.buildingsmart.org/api/SearchList/v1?SearchText=${encodeURIComponent(searchTerm)}&DictionaryUri=${encodeURIComponent(dictUri)}&languageCode=en`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return { error: `bSDD HTTP ${res.status}` };
+    const data = await res.json();
+    const classes = (data.classes || []).slice(0, 10).map(c => ({
+      ifcClass: c.name,                          // z.B. IfcSanitaryTerminal
+      ifcClassUpper: c.name.toUpperCase(),       // z.B. IFCSANITARYTERMINAL
+      definition: (c.definition || '').slice(0, 120),
+    }));
+    return classes.length
+      ? { matches: classes }
+      : { matches: [], hint: 'Keine IFC-Klasse gefunden — anderen Suchbegriff versuchen (Englisch)' };
+  } catch(e) {
+    return { error: `bSDD-Suche fehlgeschlagen: ${e.message}` };
+  }
+}
+
 // Tool-Definition für Anthropic Tool Use
 const AI_TOOLS = [
   {
+    name: 'search_ifc_entity',
+    description: 'Sucht in bSDD (buildingSMART Data Dictionary) nach der passenden IFC-Entitätsklasse für einen natürlichsprachigen Begriff. Gibt passende IFC-Klassennamen zurück. WICHTIG: Verwende dieses Tool immer wenn du unsicher bist welche IFC-Klasse ein Objekt hat — die IFC-Klasse wird als Entitätsfilter in der IDS-Spezifikation verwendet und muss korrekt sein. Suche auf Englisch.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        search_term: {
+          type: 'string',
+          description: 'Suchbegriff auf Englisch, z.B. "washbasin", "wall", "heat pump". Übersetze deutsche Begriffe zuerst ins Englische.',
+        },
+      },
+      required: ['search_term'],
+    },
+  },
+  {
     name: 'lookup_ifc_class',
-    description: 'Schlägt eine IFC-Klasse in bSDD (buildingSMART Data Dictionary) nach. Gibt offizielle PredefinedTypes und verfügbare Properties mit Datentypen zurück. Verwende dieses Tool wenn du die genauen PredefinedTypes oder Properties einer IFC-Klasse brauchst.',
+    description: 'Schlägt eine bekannte IFC-Klasse in bSDD nach und gibt offizielle PredefinedTypes und Properties zurück. Verwende dieses Tool nachdem du die richtige Klasse via search_ifc_entity gefunden hast oder wenn du die Klasse bereits kennst.',
     input_schema: {
       type: 'object',
       properties: {
@@ -2858,23 +2898,23 @@ async function callAI(messages, testOnly) {
         const textBlock = data.content.find(b => b.type === 'text');
         return textBlock?.text || '';
       }
-      // Tool-Aufruf verarbeiten
-      const toolUseBlock = data.content.find(b => b.type === 'tool_use');
-      if (!toolUseBlock) break;
-      // bSDD abfragen
-      const bsddResult = await bsddLookupClass(toolUseBlock.input.ifc_class || '');
-      // Nachrichten um Assistant-Antwort + Tool-Ergebnis erweitern
+      // Tool-Aufrufe verarbeiten (ggf. mehrere im selben Turn)
+      const toolUseBlocks = data.content.filter(b => b.type === 'tool_use');
+      if (!toolUseBlocks.length) break;
+      const toolResults = await Promise.all(toolUseBlocks.map(async tb => {
+        let result;
+        if (tb.name === 'search_ifc_entity') {
+          result = await bsddSearchEntity(tb.input.search_term || '');
+        } else {
+          result = await bsddLookupClass(tb.input.ifc_class || '');
+        }
+        return { type: 'tool_result', tool_use_id: tb.id, content: JSON.stringify(result) };
+      }));
+      // Nachrichten um Assistant-Antwort + alle Tool-Ergebnisse erweitern
       currentMessages = [
         ...currentMessages,
         { role: 'assistant', content: data.content },
-        {
-          role: 'user',
-          content: [{
-            type: 'tool_result',
-            tool_use_id: toolUseBlock.id,
-            content: JSON.stringify(bsddResult),
-          }],
-        },
+        { role: 'user', content: toolResults },
       ];
     }
     throw new Error('Maximale Tool-Runden erreicht');
@@ -2910,7 +2950,9 @@ VERHALTEN:
 - Wenn Pflichtfelder fehlen: stelle GENAU EINE gezielte Rückfrage, nie mehrere gleichzeitig
 - Sobald alle Informationen vorhanden: gib die Spezifikation als JSON aus
 - Erkläre kurz (1-2 Sätze) was die Spezifikation prüft
-- Verwende das Tool lookup_ifc_class wenn du PredefinedTypes oder Properties einer IFC-Klasse nachschlagen musst — verlasse dich nicht auf Vermutungen
+- Wenn ein Nutzer ein Objekt benennt (z.B. "Waschbecken", "Wärmepumpe"): verwende zuerst search_ifc_entity um die korrekte IFC-Klasse zu finden — die Klasse ist der Entitätsfilter der Spezifikation und muss exakt stimmen
+- Verwende lookup_ifc_class sobald du die Klasse kennst, um PredefinedTypes und Properties nachzuschlagen
+- Verlasse dich nie auf Vermutungen bei IFC-Klassennamen
 
 FACETTEN UND PFLICHTFELDER:
 entity         → name (z.B. IFCWALL) [PFLICHT], predefinedType [optional]
