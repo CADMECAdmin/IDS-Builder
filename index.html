@@ -2371,7 +2371,7 @@ document.addEventListener('keydown', e => {
 ══════════════════════════════════════════════════════════════════ */
 let aiCfg = {
   provider: '', apiKey: '', serverUrl: 'http://localhost:11434',
-  model: 'claude-haiku-4-5',
+  model: 'claude-sonnet-4-5',
   discipline: '', customPsets: '', siaPhasen: '',
 };
 let aiMessages = [];
@@ -2545,7 +2545,7 @@ function renderObStep() {
 }
 
 async function fetchBestAnthropicModel(apiKey) {
-  // Verfügbare Modelle abrufen und bestes Haiku-Modell wählen
+  // Verfügbare Modelle abrufen (API gibt neueste zuerst zurück)
   const res = await fetch('https://api.anthropic.com/v1/models', {
     headers: {
       'x-api-key': apiKey,
@@ -2556,9 +2556,15 @@ async function fetchBestAnthropicModel(apiKey) {
   if (!res.ok) return null;
   const data = await res.json();
   const models = (data.data || []).map(m => m.id);
-  // Präferenz: haiku (günstigste Option), sonst erstes verfügbares Modell
-  const haiku = models.find(id => id.toLowerCase().includes('haiku'));
-  return haiku || models[0] || 'claude-haiku-4-5';
+
+  // Beste Wahl für strukturierte JSON-Generierung + Rückfragen: Sonnet
+  // Priorität: 1. Sonnet (bestes Preis-Leistungs-Verhältnis für diese Aufgabe)
+  //            2. Haiku  (Fallback wenn kein Sonnet verfügbar)
+  //            3. Erstes verfügbares Modell
+  // Opus wird bewusst übersprungen (zu teuer, für diese Aufgabe nicht nötig)
+  const sonnet = models.find(id => id.toLowerCase().includes('sonnet'));
+  const haiku  = models.find(id => id.toLowerCase().includes('haiku'));
+  return sonnet || haiku || models[0] || 'claude-sonnet-4-5';
 }
 
 async function testAIConnection() {
@@ -2695,7 +2701,7 @@ async function callAI(messages, testOnly) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: aiCfg.model || 'claude-haiku-4-5',
+        model: aiCfg.model || 'claude-sonnet-4-5',
         max_tokens: 1024,
         system: systemPrompt,
         messages: messages,
