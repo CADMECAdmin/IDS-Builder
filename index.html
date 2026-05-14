@@ -2371,6 +2371,7 @@ document.addEventListener('keydown', e => {
 ══════════════════════════════════════════════════════════════════ */
 let aiCfg = {
   provider: '', apiKey: '', serverUrl: 'http://localhost:11434',
+  model: 'claude-haiku-4-5',
   discipline: '', customPsets: '', siaPhasen: '',
 };
 let aiMessages = [];
@@ -2415,8 +2416,12 @@ function obValidate() {
 function obSave() {
   if (obStep === 0) aiCfg.provider = document.querySelector('input[name="ob-provider"]:checked')?.value || aiCfg.provider;
   if (obStep === 1) {
-    if (aiCfg.provider === 'anthropic') aiCfg.apiKey = document.getElementById('ob-apikey').value.trim();
-    else aiCfg.serverUrl = document.getElementById('ob-serverurl').value.trim() || 'http://localhost:11434';
+    if (aiCfg.provider === 'anthropic') {
+      aiCfg.apiKey = document.getElementById('ob-apikey').value.trim();
+      aiCfg.model  = document.getElementById('ob-model')?.value.trim() || 'claude-haiku-4-5';
+    } else {
+      aiCfg.serverUrl = document.getElementById('ob-serverurl').value.trim() || 'http://localhost:11434';
+    }
   }
   if (obStep === 2) {
     aiCfg.discipline  = document.getElementById('ob-discipline').value.trim();
@@ -2478,6 +2483,12 @@ function renderObStep() {
               <button class="btn btn-secondary btn-sm" onclick="testAIConnection()">Testen</button>
             </div>
             <div class="ob-hint">⚠ Der Key wird nur lokal in deinem Browser gespeichert. Niemand sonst hat Zugriff.</div>
+            <div style="margin-top:10px">
+              <label style="font-size:12px;font-weight:500;color:var(--c-muted);display:block;margin-bottom:4px">Modell
+                <span style="font-weight:400;color:var(--c-muted)"> — aktuelles Modell auf <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" style="color:var(--c-primary)">docs.anthropic.com/models</a></span>
+              </label>
+              <input id="ob-model" type="text" placeholder="claude-haiku-4-5" value="${aiCfg.model||'claude-haiku-4-5'}" style="width:100%;font-family:monospace;font-size:12px" />
+            </div>
             <div style="margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px">
               <div style="font-weight:600;margin-bottom:6px;color:#92400e">💰 Kostenkontrolle empfohlen</div>
               <p style="color:#78350f;margin-bottom:8px">
@@ -2656,7 +2667,7 @@ async function callAI(messages, testOnly) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: aiCfg.model || 'claude-haiku-4-5',
         max_tokens: 1024,
         system: systemPrompt,
         messages: messages,
