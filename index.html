@@ -2794,12 +2794,72 @@ VERHALTEN:
 - Erkläre kurz (1-2 Sätze) was die Spezifikation prüft
 
 FACETTEN UND PFLICHTFELDER:
-entity     → name (z.B. IFCWALL) [PFLICHT], predefinedType [optional]
-attribute  → name (z.B. Name, Description, Tag) [PFLICHT], value [optional], cardinality [standard: required]
-property   → pset (z.B. Pset_WallCommon) [PFLICHT], name [PFLICHT], dataType (z.B. IFCBOOLEAN) [PFLICHT wenn value], value [optional], cardinality [standard: required]
+entity         → name (z.B. IFCWALL) [PFLICHT], predefinedType [optional]
+attribute      → name (z.B. Name, Description, Tag) [PFLICHT], value [optional], cardinality [standard: required]
+property       → pset (z.B. Pset_WallCommon) [PFLICHT], name [PFLICHT], dataType (z.B. IFCBOOLEAN) [PFLICHT wenn value], value [optional], cardinality [standard: required]
 classification → system (z.B. eBKP-H) [PFLICHT], value [optional], cardinality [standard: required]
-material   → value [optional], cardinality [standard: required]
-partof     → relation (z.B. IFCRELAGGREGATES) [PFLICHT], entity [optional]
+material       → value [optional], cardinality [standard: required]
+partof         → relation (z.B. IFCRELAGGREGATES) [PFLICHT], entity [optional]
+
+DEUTSCHE BEGRIFFE → IFC-ENTITÄTEN (verbindlich verwenden):
+Wand / Mauer / Wandscheibe            → IFCWALL
+Aussenwand / Fassadenwand             → IFCWALL  predefinedType: EXTERNAL
+Innenwand / Trennwand                 → IFCWALL  predefinedType: INTERNAL
+Vorhangfassade / Glasfassade          → IFCCURTAINWALL
+Decke / Geschossdecke / Betonplatte   → IFCSLAB  predefinedType: FLOOR
+Dach / Flachdach / Dachplatte         → IFCROOF  (oder IFCSLAB predefinedType: ROOF)
+Bodenplatte / Fundamentplatte         → IFCSLAB  predefinedType: BASESLAB
+Fundament / Streifenfundament         → IFCFOOTING
+Pfahl / Pfahlgründung                 → IFCPILE
+Stütze / Säule                        → IFCCOLUMN
+Träger / Unterzug / Riegel            → IFCBEAM
+Rippe / Profil / Stabwerk             → IFCMEMBER
+Tür / Türe                            → IFCDOOR
+Fenster                               → IFCWINDOW
+Treppe                                → IFCSTAIR
+Treppenlauf                           → IFCSTAIRFLIGHT
+Rampe                                 → IFCRAMP
+Geländer / Brüstung                   → IFCRAILING
+Sonnenschutz / Store / Raffstore      → IFCSHADINGDEVICE
+Bekleidung / Verkleidung / Bodenbelag → IFCCOVERING
+Öffnung / Aussparung / Durchbruch     → IFCOPENINGELEMENT
+Platzhalter / Proxy                   → IFCBUILDINGELEMENTPROXY
+Raum / Zimmer / Zone                  → IFCSPACE
+Geschoss / Stockwerk / Etage / EG / OG / UG → IFCBUILDINGSTOREY
+Gebäude                               → IFCBUILDING
+Grundstück / Parzelle                 → IFCSITE
+Bewehrung / Armierungsstab            → IFCREINFORCINGBAR
+Bewehrungsmatte                       → IFCREINFORCINGMESH
+Rohr / Leitung (Heizung/Sanitär)      → IFCPIPESEGMENT
+Lüftungskanal / Kanal                 → IFCDUCTSEGMENT
+Kabel / Kabeltrasse                   → IFCCABLESEGMENT
+Ventil / Absperrschieber              → IFCVALVE
+Klappe / Brandschutzklappe            → IFCDAMPER
+Pumpe                                 → IFCPUMP
+Lüfter / Ventilator                   → IFCFAN
+Boiler / Kessel / Wassererwärmer      → IFCBOILER
+Kühlaggregat / Kältemaschine          → IFCCHILLER
+Sanitäreinrichtung / WC / Waschbecken / Dusche / Badewanne → IFCSANITARYTERMINAL
+Steckdose / Auslass                   → IFCOUTLET
+Schalter / Taster                     → IFCSWITCHINGDEVICE
+Sensor / Fühler / Melder              → IFCSENSOR
+Möbel / Einrichtung                   → IFCFURNITURE
+
+HÄUFIGE STANDARD-PSETS (wenn passend automatisch vorschlagen):
+IFCWALL       → Pset_WallCommon      (IsExternal:BOOL, LoadBearing:BOOL, FireRating:TEXT, AcousticRating:TEXT, ThermalTransmittance:REAL)
+IFCSLAB       → Pset_SlabCommon      (IsExternal:BOOL, LoadBearing:BOOL, FireRating:TEXT)
+IFCCOLUMN     → Pset_ColumnCommon    (LoadBearing:BOOL, FireRating:TEXT)
+IFCBEAM       → Pset_BeamCommon      (LoadBearing:BOOL, FireRating:TEXT)
+IFCDOOR       → Pset_DoorCommon      (IsExternal:BOOL, FireRating:TEXT, SecurityRating:TEXT, AcousticRating:TEXT)
+IFCWINDOW     → Pset_WindowCommon    (IsExternal:BOOL, FireRating:TEXT, ThermalTransmittance:REAL)
+IFCSPACE      → Pset_SpaceCommon     (IsExternal:BOOL, GrossFloorArea:AREA, NetFloorArea:AREA, GrossVolume:VOLUME)
+IFCROOF       → Pset_RoofCommon      (FireRating:TEXT)
+IFCSTAIR      → Pset_StairCommon     (FireRating:TEXT, HandicapAccessible:BOOL)
+IFCCOVERING   → Pset_CoveringCommon  (FireRating:TEXT, AcousticRating:TEXT)
+IFCPIPESEGMENT → Pset_PipeSegmentTypeCommon (NominalDiameter:REAL, InnerDiameter:REAL)
+IFCDUCTSEGMENT → Pset_DuctSegmentTypeCommon (Shape:TEXT, NominalWidth:REAL, NominalHeight:REAL)
+
+KLASSIFIKATION: In der Schweiz wird häufig eBKP-H verwendet (system: "eBKP-H").
 
 MINOCCURS / MAXOCCURS (Erwartete Anzahl):
 - "muss vorhanden sein" / "mindestens": minOccurs=1, maxOccurs="unbounded"
