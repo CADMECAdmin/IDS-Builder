@@ -3569,6 +3569,30 @@ function tokenizeAttrs(str) {
   return tokens;
 }
 
+// Decode IFC STEP string escape sequences:
+//   \X\XX        → single Latin-1 char (e.g. \X\DC = Ü)
+//   \X2\XXXX\X0\ → UTF-16 BE sequence
+//   \X4\XXXXXXXX\X0\ → UTF-32 sequence
+function decodeIFCString(s) {
+  // \X2\...\X0\ — UTF-16 BE (most common for CJK, etc.)
+  s = s.replace(/\\X2\\([0-9A-Fa-f]+)\\X0\\/g, (_, hex) => {
+    let r = '';
+    for (let i = 0; i < hex.length; i += 4)
+      r += String.fromCharCode(parseInt(hex.slice(i, i + 4), 16));
+    return r;
+  });
+  // \X4\...\X0\ — UTF-32
+  s = s.replace(/\\X4\\([0-9A-Fa-f]+)\\X0\\/g, (_, hex) => {
+    let r = '';
+    for (let i = 0; i < hex.length; i += 8)
+      r += String.fromCodePoint(parseInt(hex.slice(i, i + 8), 16));
+    return r;
+  });
+  // \X\XX — Latin-1 supplement (Ä Ö Ü ä ö ü ß etc.) — most common in European files
+  s = s.replace(/\\X\\([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return s;
+}
+
 function parseAttrValue(s) {
   s = s.trim();
   if (s === '$' || s === '' || s === '*') return null;
@@ -3580,7 +3604,7 @@ function parseAttrValue(s) {
       if (s[i] === "'" && s[i+1] === "'") { result += "'"; i++; }
       else result += s[i];
     }
-    return result;
+    return decodeIFCString(result); // decode \X\XX, \X2\, \X4\ escape sequences
   }
   if (s[0] === '(') {
     return tokenizeAttrs(s.slice(1, -1)).map(parseAttrValue);
