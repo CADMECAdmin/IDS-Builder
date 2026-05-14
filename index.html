@@ -339,6 +339,54 @@ body { background: var(--c-bg); min-height: 100vh; }
   font-size: 12px; color: #1d4ed8;
 }
 .ifc-note svg { flex-shrink: 0; }
+
+/* ── IDS Checker ─────────────────────────────────────────────────── */
+.checker-modal { max-width: 780px !important; max-height: 90vh; display: flex; flex-direction: column; }
+.checker-body { flex: 1; overflow-y: auto; padding: 20px; }
+.checker-section { margin-bottom: 20px; }
+.checker-section-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.checker-section-title span { background: var(--c-primary); color: white; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.checker-dropzone { border: 2px dashed var(--c-border); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.checker-dropzone:hover, .checker-dropzone.drag-over { border-color: var(--c-primary); background: #f0f4ff; }
+.checker-dropzone.loaded { border-color: #16a34a; background: #f0fdf4; cursor: default; }
+.checker-dropzone svg { display: block; margin: 0 auto 8px; opacity: .4; }
+.checker-dropzone.loaded svg { opacity: 1; color: #16a34a; }
+.checker-dropzone-label { font-size: 13px; color: var(--c-muted); }
+.checker-dropzone.loaded .checker-dropzone-label { color: #15803d; font-weight: 500; }
+.checker-dropzone-sub { font-size: 11px; color: var(--c-muted); margin-top: 4px; }
+.checker-ids-opts { display: flex; flex-direction: column; gap: 8px; }
+.checker-ids-opt { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--c-border); border-radius: 8px; cursor: pointer; transition: border-color .15s; }
+.checker-ids-opt:has(input:checked) { border-color: var(--c-primary); background: #f0f4ff; }
+.checker-ids-opt input[type=radio] { accent-color: var(--c-primary); }
+.checker-ids-opt-label { font-size: 13px; font-weight: 500; }
+.checker-ids-opt-sub { font-size: 11px; color: var(--c-muted); }
+.checker-progress { display: none; padding: 16px; background: var(--c-bg); border-radius: 8px; text-align: center; }
+.checker-progress.active { display: block; }
+.checker-progress-bar { height: 4px; background: var(--c-border); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+.checker-progress-fill { height: 100%; background: var(--c-primary); border-radius: 2px; transition: width .3s; }
+.checker-progress-msg { font-size: 13px; color: var(--c-muted); margin-top: 8px; }
+.checker-summary-bar { background: var(--c-bg); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.checker-summary-stat { display: flex; align-items: center; gap: 6px; }
+.checker-summary-stat strong { color: var(--c-text); }
+.check-result-card { border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+.check-result-card.pass { border-left: 4px solid #16a34a; }
+.check-result-card.fail { border-left: 4px solid #dc2626; }
+.check-result-card.na   { border-left: 4px solid #94a3b8; }
+.check-result-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: var(--c-bg); transition: background .1s; }
+.check-result-header:hover { background: #eef2f7; }
+.check-result-name { flex: 1; font-weight: 600; font-size: 13px; }
+.check-result-meta { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+.check-result-chevron { transition: transform .2s; color: var(--c-muted); flex-shrink: 0; }
+.check-result-card.open .check-result-chevron { transform: rotate(90deg); }
+.check-result-body { padding: 12px 16px; border-top: 1px solid var(--c-border); display: none; }
+.check-result-card.open .check-result-body { display: block; }
+.badge-pass { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-fail { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-na   { background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.failure-item { padding: 8px 12px; border-radius: 6px; background: #fef2f2; margin-bottom: 4px; font-size: 12px; }
+.failure-item-label { font-weight: 500; color: #7f1d1d; }
+.failure-reason { color: #dc2626; margin-top: 2px; font-size: 11px; }
+.checker-empty { text-align: center; padding: 40px 20px; color: var(--c-muted); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -355,6 +403,10 @@ body { background: var(--c-bg); min-height: 100vh; }
     <button class="btn btn-ai btn-sm" id="btn-ai-open">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       IDS-Agent
+    </button>
+    <button class="btn btn-secondary btn-sm" id="btn-checker-open">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      IDS Prüfen
     </button>
     <button class="btn btn-secondary btn-sm" id="btn-import">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -671,6 +723,89 @@ body { background: var(--c-bg); min-height: 100vh; }
       <button class="btn btn-primary" id="ai-send-btn" onclick="sendAIMessage()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── IDS CHECKER MODAL ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="checker-modal">
+  <div class="modal checker-modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <h2>IDS Checker</h2>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary btn-sm" id="btn-checker-export" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Ergebnisse exportieren
+        </button>
+        <button class="btn btn-ghost btn-icon" id="checker-modal-close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="checker-body">
+      <!-- Step 1: Dateien -->
+      <div class="checker-section">
+        <div class="checker-section-title"><span>1</span> Dateien</div>
+        <!-- IFC Dropzone -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:500;color:var(--c-muted);display:block;margin-bottom:6px">IFC-Datei</label>
+          <div class="checker-dropzone" id="ifc-dropzone" onclick="document.getElementById('ifc-file-input').click()">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <div class="checker-dropzone-label">IFC-Datei hier ablegen oder klicken</div>
+            <div class="checker-dropzone-sub" id="ifc-file-info">.ifc, .ifczip — bleibt im Browser, wird nicht hochgeladen</div>
+          </div>
+          <input type="file" id="ifc-file-input" accept=".ifc,.ifczip" style="display:none">
+        </div>
+        <!-- IDS Quelle -->
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--c-muted);display:block;margin-bottom:6px">IDS-Quelle</label>
+          <div class="checker-ids-opts">
+            <label class="checker-ids-opt">
+              <input type="radio" name="ids-source" value="current" checked onchange="checkerOnIdsSourceChange()">
+              <div>
+                <div class="checker-ids-opt-label">Aktuelle IDS im Builder verwenden</div>
+                <div class="checker-ids-opt-sub" id="ids-source-current-info">Verwendet die aktuell geladenen Spezifikationen</div>
+              </div>
+            </label>
+            <label class="checker-ids-opt">
+              <input type="radio" name="ids-source" value="file" onchange="checkerOnIdsSourceChange()">
+              <div>
+                <div class="checker-ids-opt-label">IDS-Datei laden</div>
+                <div class="checker-ids-opt-sub" id="ids-source-file-info">
+                  <button type="button" class="btn btn-secondary btn-sm" style="margin-top:4px;display:none" id="btn-load-ids-file" onclick="event.stopPropagation();document.getElementById('checker-ids-input').click()">IDS-Datei wählen…</button>
+                  <span id="ids-file-name" style="color:var(--c-muted)">Noch keine Datei gewählt</span>
+                </div>
+              </div>
+            </label>
+          </div>
+          <input type="file" id="checker-ids-input" accept=".ids,.xml" style="display:none">
+        </div>
+      </div>
+
+      <!-- Step 2: Starten -->
+      <div class="checker-section">
+        <div class="checker-section-title"><span>2</span> Prüfung</div>
+        <button class="btn btn-primary" id="btn-run-check" disabled onclick="runIDSCheck()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Prüfung starten
+        </button>
+        <!-- Progress -->
+        <div class="checker-progress" id="checker-progress">
+          <div style="font-size:14px;font-weight:600" id="checker-progress-title">Wird verarbeitet…</div>
+          <div class="checker-progress-bar"><div class="checker-progress-fill" id="checker-progress-fill" style="width:0%"></div></div>
+          <div class="checker-progress-msg" id="checker-progress-msg">Bitte warten…</div>
+        </div>
+      </div>
+
+      <!-- Step 3: Ergebnisse -->
+      <div class="checker-section" id="checker-results-section" style="display:none">
+        <div class="checker-section-title"><span>3</span> Ergebnisse</div>
+        <div class="checker-summary-bar" id="checker-summary-bar"></div>
+        <div id="checker-results-list"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2354,12 +2489,46 @@ document.getElementById('file-import').addEventListener('change', e => {
   e.target.value = '';
 });
 
+// ── Checker events ───────────────────────────────────────────────
+document.getElementById('btn-checker-open').onclick  = openCheckerModal;
+document.getElementById('checker-modal-close').onclick = closeCheckerModal;
+document.getElementById('checker-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeCheckerModal();
+});
+document.getElementById('btn-checker-export').onclick = exportCheckerResults;
+
+// IFC file input
+document.getElementById('ifc-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) checkerSetIFCFile(file);
+  e.target.value = '';
+});
+
+// IFC Drag & Drop
+const ifcDz = document.getElementById('ifc-dropzone');
+ifcDz.addEventListener('dragover', e => { e.preventDefault(); ifcDz.classList.add('drag-over'); });
+ifcDz.addEventListener('dragleave', () => ifcDz.classList.remove('drag-over'));
+ifcDz.addEventListener('drop', e => {
+  e.preventDefault(); ifcDz.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file && (file.name.endsWith('.ifc') || file.name.endsWith('.ifczip'))) checkerSetIFCFile(file);
+  else showToast('Bitte eine .ifc-Datei ablegen', true);
+});
+
+// IDS file for checker
+document.getElementById('checker-ids-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) checkerLoadIDSFile(file);
+  e.target.value = '';
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.getElementById('spec-modal').classList.remove('open');
     document.getElementById('xml-modal').classList.remove('open');
     document.getElementById('ai-onboarding-modal').classList.remove('open');
     document.getElementById('ai-chat-modal').classList.remove('open');
+    document.getElementById('checker-modal').classList.remove('open');
   }
   if ((e.ctrlKey||e.metaKey) && e.key === 's') {
     e.preventDefault();
@@ -3166,6 +3335,1154 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 loadAICfg();
+
+/* ══════════════════════════════════════════════════════════════════
+   IDS CHECKER
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Checker State ─────────────────────────────────────────────── */
+const checkerState = {
+  ifcFile: null,        // File object
+  ifcText: null,        // raw string
+  idsSpecs: null,       // array of spec objects (from builder or loaded IDS)
+  idsMeta: null,        // {title, ...}
+  results: null,        // check results array
+};
+
+/* ── Open / Close Checker Modal ────────────────────────────────── */
+function openCheckerModal() {
+  // Update current-IDS info label
+  const n = state.specs.length;
+  const t = document.getElementById('meta-title').value || 'Ohne Titel';
+  document.getElementById('ids-source-current-info').textContent =
+    `«${t}» — ${n} Spezifikation${n !== 1 ? 'en' : ''}`;
+  document.getElementById('checker-modal').classList.add('open');
+}
+function closeCheckerModal() {
+  document.getElementById('checker-modal').classList.remove('open');
+}
+
+/* ── IDS Source Radio ──────────────────────────────────────────── */
+function checkerOnIdsSourceChange() {
+  const val = document.querySelector('input[name="ids-source"]:checked')?.value;
+  const btn = document.getElementById('btn-load-ids-file');
+  if (btn) btn.style.display = val === 'file' ? '' : 'none';
+}
+
+/* ── IFC File Handling ─────────────────────────────────────────── */
+function checkerSetIFCFile(file) {
+  if (!file) return;
+  checkerState.ifcFile = file;
+  checkerState.ifcText = null; // reset cache
+  const dz = document.getElementById('ifc-dropzone');
+  dz.classList.add('loaded');
+  dz.onclick = null; // disable click once loaded, allow replace via sub info click
+  const sizeMB = (file.size / 1048576).toFixed(1);
+  dz.innerHTML = `
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 12 12 15 15 12"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <div class="checker-dropzone-label">${escChecker(file.name)}</div>
+    <div class="checker-dropzone-sub">${sizeMB} MB — <a href="#" onclick="event.preventDefault();checkerReplaceIFC()" style="color:var(--c-primary)">Andere Datei wählen</a></div>
+  `;
+  updateRunButton();
+}
+
+function checkerReplaceIFC() {
+  checkerState.ifcFile = null;
+  const dz = document.getElementById('ifc-dropzone');
+  dz.classList.remove('loaded');
+  dz.onclick = () => document.getElementById('ifc-file-input').click();
+  dz.innerHTML = `
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    <div class="checker-dropzone-label">IFC-Datei hier ablegen oder klicken</div>
+    <div class="checker-dropzone-sub" id="ifc-file-info">.ifc, .ifczip — bleibt im Browser, wird nicht hochgeladen</div>
+  `;
+  updateRunButton();
+}
+
+function updateRunButton() {
+  const btn = document.getElementById('btn-run-check');
+  if (!btn) return;
+  btn.disabled = !checkerState.ifcFile;
+}
+
+/* ── IDS File Loading ──────────────────────────────────────────── */
+let checkerIdsFileSpecs = null;
+let checkerIdsFileMeta  = null;
+
+function checkerLoadIDSFile(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const { specs, meta } = parseIDSForChecker(ev.target.result);
+      checkerIdsFileSpecs = specs;
+      checkerIdsFileMeta  = meta;
+      document.getElementById('ids-file-name').innerHTML =
+        `<span style="color:#16a34a;font-weight:500">${escChecker(file.name)} — ${specs.length} Spezifikation${specs.length!==1?'en':''}</span>`;
+    } catch(e) {
+      document.getElementById('ids-file-name').textContent = 'Fehler: ' + e.message;
+      showToast('IDS-Fehler: ' + e.message, true);
+    }
+  };
+  r.readAsText(file, 'UTF-8');
+}
+
+/* Parse an IDS XML file into the same internal spec format used by the builder */
+function parseIDSForChecker(xmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, 'text/xml');
+  if (doc.querySelector('parsererror')) throw new Error('XML Parse-Fehler');
+  const ns   = 'http://standards.buildingsmart.org/IDS';
+  const xsns = 'http://www.w3.org/2001/XMLSchema';
+
+  function q(el, tag) { return el.getElementsByTagNameNS(ns, tag); }
+  function attr(el, a) { return el.getAttribute(a) || ''; }
+  function g(tag) { const e = doc.getElementsByTagNameNS(ns, tag)[0]; return e ? e.textContent.trim() : ''; }
+
+  function parseEntityName(el) {
+    if (!el) return '';
+    const sv = q(el, 'simpleValue')[0];
+    if (sv) return sv.textContent.trim();
+    return Array.from(el.getElementsByTagNameNS(xsns,'enumeration')).map(e=>e.getAttribute('value')).join('|');
+  }
+
+  function parseValue(el) {
+    if (!el) return null;
+    const sv = q(el,'simpleValue')[0];
+    if (sv) return { type:'simple', value: sv.textContent.trim() };
+    const rest = el.getElementsByTagNameNS(xsns,'restriction')[0];
+    if (!rest) return null;
+    const enums = Array.from(rest.getElementsByTagNameNS(xsns,'enumeration')).map(e=>e.getAttribute('value'));
+    if (enums.length) return { type:'enumeration', values: enums };
+    const pat = rest.getElementsByTagNameNS(xsns,'pattern')[0];
+    if (pat) return { type:'pattern', pattern: pat.getAttribute('value') };
+    const minI = rest.getElementsByTagNameNS(xsns,'minInclusive')[0];
+    const maxI = rest.getElementsByTagNameNS(xsns,'maxInclusive')[0];
+    const minE = rest.getElementsByTagNameNS(xsns,'minExclusive')[0];
+    const maxE = rest.getElementsByTagNameNS(xsns,'maxExclusive')[0];
+    if (minI||maxI||minE||maxE) return {
+      type:'bounds',
+      minInclusive: minI ? minI.getAttribute('value') : '',
+      maxInclusive: maxI ? maxI.getAttribute('value') : '',
+      minExclusive: minE ? minE.getAttribute('value') : '',
+      maxExclusive: maxE ? maxE.getAttribute('value') : '',
+    };
+    return null;
+  }
+
+  function parseFacet(el) {
+    const tag  = el.localName;
+    const instr = attr(el,'instructions');
+    if (tag==='entity') {
+      return { type:'entity', instructions:instr,
+        name: parseEntityName(q(el,'name')[0]),
+        predefinedType: parseEntityName(q(el,'predefinedType')[0]) };
+    }
+    if (tag==='attribute') {
+      const nameEl = q(el,'name')[0];
+      return { type:'attribute', instructions:instr,
+        cardinality: attr(el,'cardinality')||'required',
+        name: nameEl ? (q(nameEl,'simpleValue')[0]||{}).textContent||'' : '',
+        value: parseValue(q(el,'value')[0]) };
+    }
+    if (tag==='property') {
+      const pset = q(el,'propertySet')[0];
+      const bn   = q(el,'baseName')[0];
+      const dtEl = q(el,'dataType')[0];
+      const dtSv = dtEl ? q(dtEl,'simpleValue')[0] : null;
+      return { type:'property', instructions:instr,
+        cardinality: attr(el,'cardinality')||'required',
+        dataType: dtSv ? dtSv.textContent.trim() : (attr(el,'dataType')||''),
+        uri: attr(el,'uri'),
+        propertySet: pset ? (q(pset,'simpleValue')[0]||{}).textContent||'' : '',
+        baseName:    bn   ? (q(bn,  'simpleValue')[0]||{}).textContent||'' : '',
+        value: parseValue(q(el,'value')[0]) };
+    }
+    if (tag==='classification') {
+      const sys = q(el,'system')[0];
+      return { type:'classification', instructions:instr,
+        cardinality: attr(el,'cardinality')||'required', uri: attr(el,'uri'),
+        system: sys ? (q(sys,'simpleValue')[0]||{}).textContent||'' : '',
+        value: parseValue(q(el,'value')[0]) };
+    }
+    if (tag==='material') {
+      return { type:'material', instructions:instr,
+        cardinality: attr(el,'cardinality')||'required', uri: attr(el,'uri'),
+        value: parseValue(q(el,'value')[0]) };
+    }
+    if (tag==='partOf') {
+      const entEl = q(el,'entity')[0];
+      return { type:'partof', instructions:instr,
+        cardinality: attr(el,'cardinality')||'required',
+        relation: attr(el,'relation')||'IFCRELAGGREGATES',
+        name:           entEl ? parseEntityName(q(entEl,'name')[0])          : '',
+        predefinedType: entEl ? parseEntityName(q(entEl,'predefinedType')[0]): '' };
+    }
+    return null;
+  }
+
+  function parseFacetList(clauseEl) {
+    const result = [];
+    for (const child of clauseEl.children) {
+      const f = parseFacet(child);
+      if (f) result.push(f);
+    }
+    return result;
+  }
+
+  const specs = [];
+  for (const specEl of doc.getElementsByTagNameNS(ns,'specification')) {
+    const appEl = specEl.getElementsByTagNameNS(ns,'applicability')[0];
+    const reqEl = specEl.getElementsByTagNameNS(ns,'requirements')[0];
+    specs.push({
+      name:          attr(specEl,'name'),
+      identifier:    attr(specEl,'identifier'),
+      description:   attr(specEl,'description'),
+      applicability: appEl ? parseFacetList(appEl) : [],
+      requirements:  reqEl ? parseFacetList(reqEl) : [],
+    });
+  }
+  const meta = { title: g('title'), description: g('description'), author: g('author') };
+  return { specs, meta };
+}
+
+/* ── IFC STEP Parser ───────────────────────────────────────────── */
+function tokenizeAttrs(str) {
+  const tokens = [];
+  let depth = 0, start = 0, inStr = false, i = 0;
+  for (; i < str.length; i++) {
+    const c = str[i];
+    if (c === "'" && !inStr) { inStr = true; continue; }
+    if (inStr) {
+      if (c === "'" && str[i+1] === "'") { i++; continue; }
+      if (c === "'") { inStr = false; }
+      continue;
+    }
+    if (c === '(') { depth++; continue; }
+    if (c === ')') { depth--; continue; }
+    if (c === ',' && depth === 0) {
+      tokens.push(str.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  tokens.push(str.slice(start).trim());
+  return tokens;
+}
+
+function parseAttrValue(s) {
+  s = s.trim();
+  if (s === '$' || s === '' || s === '*') return null;
+  if (s[0] === '#') return { ref: parseInt(s.slice(1)) };
+  if (s[0] === "'") {
+    // find closing quote handling ''
+    let result = '';
+    for (let i = 1; i < s.length - 1; i++) {
+      if (s[i] === "'" && s[i+1] === "'") { result += "'"; i++; }
+      else result += s[i];
+    }
+    return result;
+  }
+  if (s[0] === '(') {
+    return tokenizeAttrs(s.slice(1, -1)).map(parseAttrValue);
+  }
+  if (s[0] === '.') return s.slice(1, -1); // enum value
+  // IFCTYPE(value) — e.g. IFCBOOLEAN(.TRUE.) or IFCLABEL('text')
+  const typeMatch = s.match(/^([A-Z][A-Z0-9_]*)\((.+)\)$/);
+  if (typeMatch) return { ifcType: typeMatch[1], value: parseAttrValue(typeMatch[2]) };
+  if (!isNaN(s) && s !== '') return parseFloat(s);
+  return s;
+}
+
+function extractScalarValue(v) {
+  // Unwrap IFCTYPE wrapper and enum values
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'object' && v !== null) {
+    if (v.ifcType) return extractScalarValue(v.value);
+    if (v.ref !== undefined) return null; // reference — not a scalar
+  }
+  if (typeof v === 'string') {
+    // Enum: TRUE/FALSE → boolean-ish
+    if (v === 'TRUE') return true;
+    if (v === 'FALSE') return false;
+    return v;
+  }
+  return v;
+}
+
+async function parseIFCStep(text, onProgress) {
+  const index = {
+    entities:        new Map(), // id → {id, type, globalId, name, description, tag, objectType, predefinedType}
+    propsets:        new Map(), // elemId → [{name, props: Map<propName, {value, ifcType}>}]
+    materials:       new Map(), // elemId → string[]
+    classifications: new Map(), // elemId → [{system, value, identification}]
+    partOf:          new Map(), // elemId → [{relation, parentId}]
+    rawById:         new Map(), // id → {type, attrs[]}
+  };
+
+  // Split into lines and parse DATA section
+  const lines = text.split('\n');
+  const totalLines = lines.length;
+  let inData = false;
+
+  // First pass: parse all entity lines into rawById
+  for (let li = 0; li < totalLines; li++) {
+    if (li % 20000 === 0) {
+      onProgress(li / totalLines * 0.4, `IFC wird gelesen… (${Math.round(li/totalLines*100)}%)`);
+      await new Promise(r => setTimeout(r, 0));
+    }
+    const line = lines[li].trim();
+    if (line === 'DATA;') { inData = true; continue; }
+    if (line === 'ENDSEC;') { inData = false; continue; }
+    if (!inData || line[0] !== '#') continue;
+
+    // Parse: #N= TYPENAME(attrs);
+    const eqIdx = line.indexOf('=');
+    if (eqIdx < 0) continue;
+    const id = parseInt(line.slice(1, eqIdx).trim());
+    const rest = line.slice(eqIdx + 1).trim();
+    if (rest[rest.length - 1] !== ';') continue; // incomplete
+    const parenIdx = rest.indexOf('(');
+    if (parenIdx < 0) continue;
+    const type = rest.slice(0, parenIdx).trim().toUpperCase();
+    const attrStr = rest.slice(parenIdx + 1, rest.lastIndexOf(')')); // strip trailing ;
+    const attrs = tokenizeAttrs(attrStr).map(parseAttrValue);
+    index.rawById.set(id, { type, attrs });
+  }
+
+  onProgress(0.45, 'Modell wird indexiert…');
+  await new Promise(r => setTimeout(r, 0));
+
+  // Helper: get refs from a parsed value (list of #refs or single #ref)
+  function getRefs(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v.filter(x => x && x.ref !== undefined).map(x => x.ref);
+    if (v.ref !== undefined) return [v.ref];
+    return [];
+  }
+
+  // Building element types — any uppercase IFC entity that is NOT a relation/pset/type
+  // We just store everything and let the checker filter
+  const REL_TYPES = new Set([
+    'IFCRELDEFINESBYPROPERTIES','IFCPROPERTYSET','IFCPROPERTYSINGLEVALUE',
+    'IFCRELASSOCIATESMATERIAL','IFCMATERIAL','IFCMATERIALLAYERSET','IFCMATERIALLAYER',
+    'IFCMATERIALCONSTITUENTSET','IFCMATERIALCONSTITUENT','IFCRELASSOCIATESCLASSIFICATION',
+    'IFCCLASSIFICATIONREFERENCE','IFCCLASSIFICATION','IFCRELAGGREGATES',
+    'IFCRELCONTAINEDINSPATIALSTRUCTURE','IFCRELDEFINESBYTYPE',
+    'IFCPROPERTYENUMERATEDVALUE','IFCPROPERTYLISTVALUE','IFCPROPERTYVALUE',
+    'IFCRELASSIGNSTOGROUP','IFCRELNESTS','IFCRELVOIDSELEMENT','IFCRELFILLSELEMENT',
+  ]);
+
+  // Second pass: build index structures
+  const rawEntries = Array.from(index.rawById.entries());
+  const total2 = rawEntries.length;
+
+  for (let i = 0; i < total2; i++) {
+    if (i % 10000 === 0) {
+      onProgress(0.45 + (i/total2)*0.45, `Modell wird indexiert… (${Math.round(i/total2*100)}%)`);
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    const [id, { type, attrs }] = rawEntries[i];
+
+    // Store all elements that are not purely relational/support entities
+    if (!REL_TYPES.has(type)) {
+      const elem = {
+        id,
+        type,
+        globalId:      typeof attrs[0] === 'string' ? attrs[0] : null,
+        name:          typeof attrs[2] === 'string' ? attrs[2] : (attrs[2] == null ? null : null),
+        description:   typeof attrs[3] === 'string' ? attrs[3] : null,
+        objectType:    typeof attrs[4] === 'string' ? attrs[4] : null,
+        tag:           attrs[6] !== undefined && typeof attrs[6] === 'string' ? attrs[6] : null,
+        predefinedType: null,
+      };
+      // Fix: name can be null from $
+      if (attrs[2] === null || attrs[2] === undefined) elem.name = null;
+      else if (typeof attrs[2] === 'string') elem.name = attrs[2];
+      else elem.name = null;
+
+      // Find predefined type: look for enum value in attrs
+      for (let ai = attrs.length - 1; ai >= 0; ai--) {
+        const av = attrs[ai];
+        if (typeof av === 'string' && av.length > 0 && av === av.toUpperCase() &&
+            av !== 'NOTDEFINED' && av !== 'USERDEFINED' && /^[A-Z_]+$/.test(av)) {
+          elem.predefinedType = av;
+          break;
+        }
+        // Also check last attr for .ENUM. values (already unwrapped by parseAttrValue)
+        // If it's NOTDEFINED/USERDEFINED, keep looking
+        if (typeof av === 'string' && (av === 'NOTDEFINED' || av === 'USERDEFINED')) {
+          elem.predefinedType = av;
+          break;
+        }
+      }
+
+      index.entities.set(id, elem);
+    }
+
+    // IFCRELDEFINESBYPROPERTIES: attrs[4]=RelatedObjects, attrs[5]=RelatingPropDef
+    if (type === 'IFCRELDEFINESBYPROPERTIES') {
+      const relObjs = getRefs(attrs[4]);
+      const pdefRef = attrs[5];
+      if (!pdefRef || pdefRef.ref === undefined) continue;
+      const pdef = index.rawById.get(pdefRef.ref);
+      if (!pdef) continue;
+      if (pdef.type === 'IFCPROPERTYSET') {
+        const psetName = typeof pdef.attrs[2] === 'string' ? pdef.attrs[2] : null;
+        if (!psetName) continue;
+        const propRefs = getRefs(pdef.attrs[4]);
+        const props = new Map();
+        for (const pref of propRefs) {
+          const prop = index.rawById.get(pref);
+          if (!prop) continue;
+          if (prop.type === 'IFCPROPERTYSINGLEVALUE') {
+            const pName = typeof prop.attrs[0] === 'string' ? prop.attrs[0] : null;
+            if (!pName) continue;
+            const nomVal = prop.attrs[2]; // IFCTYPE(val) or direct
+            let val = null;
+            let ifcType = null;
+            if (nomVal && typeof nomVal === 'object' && nomVal.ifcType) {
+              ifcType = nomVal.ifcType;
+              val = extractScalarValue(nomVal.value);
+            } else if (nomVal !== null && nomVal !== undefined) {
+              val = extractScalarValue(nomVal);
+            }
+            props.set(pName, { value: val, ifcType });
+          }
+        }
+        for (const elemId of relObjs) {
+          if (!index.propsets.has(elemId)) index.propsets.set(elemId, []);
+          index.propsets.get(elemId).push({ name: psetName, props });
+        }
+      }
+    }
+
+    // IFCRELASSOCIATESMATERIAL: attrs[4]=RelatedObjects, attrs[5]=RelatingMaterial
+    if (type === 'IFCRELASSOCIATESMATERIAL') {
+      const relObjs = getRefs(attrs[4]);
+      const matRef = attrs[5];
+      if (!matRef || matRef.ref === undefined) continue;
+      const matEnt = index.rawById.get(matRef.ref);
+      if (!matEnt) continue;
+      const materialNames = extractMaterialNames(matEnt, index.rawById);
+      for (const elemId of relObjs) {
+        if (!index.materials.has(elemId)) index.materials.set(elemId, []);
+        index.materials.get(elemId).push(...materialNames);
+      }
+    }
+
+    // IFCRELASSOCIATESCLASSIFICATION: attrs[4]=RelatedObjects, attrs[5]=RelatingClassification
+    if (type === 'IFCRELASSOCIATESCLASSIFICATION') {
+      const relObjs = getRefs(attrs[4]);
+      const classRef = attrs[5];
+      if (!classRef || classRef.ref === undefined) continue;
+      const classEnt = index.rawById.get(classRef.ref);
+      if (!classEnt) continue;
+      // Get classification info
+      let system = null, value = null, identification = null;
+      if (classEnt.type === 'IFCCLASSIFICATIONREFERENCE') {
+        identification = typeof classEnt.attrs[2] === 'string' ? classEnt.attrs[2] : null;
+        value          = typeof classEnt.attrs[3] === 'string' ? classEnt.attrs[3] : null;
+        // attrs[4] = ReferencedSource (ref to IFCCLASSIFICATION)
+        const srcRef = classEnt.attrs[4];
+        if (srcRef && srcRef.ref !== undefined) {
+          const srcEnt = index.rawById.get(srcRef.ref);
+          if (srcEnt && srcEnt.type === 'IFCCLASSIFICATION') {
+            // IFC2X3: attrs[0]=Source, IFC4: attrs[3]=Name or attrs[0]=Source
+            system = typeof srcEnt.attrs[3] === 'string' ? srcEnt.attrs[3]
+                   : typeof srcEnt.attrs[0] === 'string' ? srcEnt.attrs[0]
+                   : null;
+          }
+        }
+      }
+      for (const elemId of relObjs) {
+        if (!index.classifications.has(elemId)) index.classifications.set(elemId, []);
+        index.classifications.get(elemId).push({ system, value, identification });
+      }
+    }
+
+    // IFCRELAGGREGATES: attrs[4]=RelatingObject(ref), attrs[5]=RelatedObjects(list)
+    if (type === 'IFCRELAGGREGATES') {
+      const parentRef = attrs[4];
+      const children  = getRefs(attrs[5]);
+      if (!parentRef || parentRef.ref === undefined) continue;
+      for (const childId of children) {
+        if (!index.partOf.has(childId)) index.partOf.set(childId, []);
+        index.partOf.get(childId).push({ relation: 'IFCRELAGGREGATES', parentId: parentRef.ref });
+      }
+    }
+
+    // IFCRELCONTAINEDINSPATIALSTRUCTURE: attrs[4]=RelatedElements, attrs[5]=RelatingStructure
+    if (type === 'IFCRELCONTAINEDINSPATIALSTRUCTURE') {
+      const elements   = getRefs(attrs[4]);
+      const structRef  = attrs[5];
+      if (!structRef || structRef.ref === undefined) continue;
+      for (const elemId of elements) {
+        if (!index.partOf.has(elemId)) index.partOf.set(elemId, []);
+        index.partOf.get(elemId).push({ relation: 'IFCRELCONTAINEDINSPATIALSTRUCTURE', parentId: structRef.ref });
+      }
+    }
+
+    // IFCRELASSIGNSTOGROUP: attrs[4]=RelatedObjects, attrs[5] or 6=RelatingGroup
+    if (type === 'IFCRELASSIGNSTOGROUP') {
+      const children = getRefs(attrs[4]);
+      const grpRef   = attrs[6] || attrs[5]; // position varies
+      if (!grpRef || grpRef.ref === undefined) continue;
+      for (const childId of children) {
+        if (!index.partOf.has(childId)) index.partOf.set(childId, []);
+        index.partOf.get(childId).push({ relation: 'IFCRELASSIGNSTOGROUP', parentId: grpRef.ref });
+      }
+    }
+
+    // IFCRELNESTS: attrs[4]=RelatingObject, attrs[5]=RelatedObjects
+    if (type === 'IFCRELNESTS') {
+      const parentRef = attrs[4];
+      const children  = getRefs(attrs[5]);
+      if (!parentRef || parentRef.ref === undefined) continue;
+      for (const childId of children) {
+        if (!index.partOf.has(childId)) index.partOf.set(childId, []);
+        index.partOf.get(childId).push({ relation: 'IFCRELNESTS', parentId: parentRef.ref });
+      }
+    }
+
+    // IFCRELVOIDSELEMENT: attrs[4]=RelatingBuildingElement, attrs[5]=RelatedOpeningElement
+    if (type === 'IFCRELVOIDSELEMENT') {
+      const bldgRef = attrs[4];
+      const opRef   = attrs[5];
+      if (!opRef || opRef.ref === undefined || !bldgRef || bldgRef.ref === undefined) continue;
+      if (!index.partOf.has(opRef.ref)) index.partOf.set(opRef.ref, []);
+      index.partOf.get(opRef.ref).push({ relation: 'IFCRELVOIDSELEMENT', parentId: bldgRef.ref });
+    }
+
+    // IFCRELFILLSELEMENT: attrs[4]=RelatingOpeningElement, attrs[5]=RelatedBuildingElement
+    if (type === 'IFCRELFILLSELEMENT') {
+      const opRef   = attrs[4];
+      const elemRef = attrs[5];
+      if (!elemRef || elemRef.ref === undefined || !opRef || opRef.ref === undefined) continue;
+      if (!index.partOf.has(elemRef.ref)) index.partOf.set(elemRef.ref, []);
+      index.partOf.get(elemRef.ref).push({ relation: 'IFCRELFILLSELEMENT', parentId: opRef.ref });
+    }
+
+    // IFCRELDEFINESBYTYPE: attrs[4]=RelatedObjects, attrs[5]=RelatingType
+    if (type === 'IFCRELDEFINESBYTYPE') {
+      const relObjs  = getRefs(attrs[4]);
+      const typeRef  = attrs[5];
+      if (!typeRef || typeRef.ref === undefined) continue;
+      const typeEnt  = index.rawById.get(typeRef.ref);
+      if (!typeEnt) continue;
+      // Inherit predefined type from type object if element doesn't have one
+      let pt = null;
+      for (let ai = typeEnt.attrs.length - 1; ai >= 0; ai--) {
+        const av = typeEnt.attrs[ai];
+        if (typeof av === 'string' && /^[A-Z_]+$/.test(av) && av.length > 0) {
+          pt = av; break;
+        }
+      }
+      for (const elemId of relObjs) {
+        const elem = index.entities.get(elemId);
+        if (elem && !elem.predefinedType && pt) {
+          elem.predefinedType = pt;
+        }
+      }
+    }
+  }
+
+  // Clean up rawById to free memory
+  index.rawById.clear();
+
+  onProgress(0.9, 'Index bereit');
+  await new Promise(r => setTimeout(r, 0));
+
+  return index;
+}
+
+function extractMaterialNames(matEnt, rawById) {
+  const names = [];
+  function getRefs(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v.filter(x => x && x.ref !== undefined).map(x => x.ref);
+    if (v.ref !== undefined) return [v.ref];
+    return [];
+  }
+
+  if (matEnt.type === 'IFCMATERIAL') {
+    const n = typeof matEnt.attrs[0] === 'string' ? matEnt.attrs[0] : null;
+    if (n) names.push(n);
+  } else if (matEnt.type === 'IFCMATERIALLAYERSET') {
+    const layerRefs = getRefs(matEnt.attrs[1]);
+    for (const lr of layerRefs) {
+      const lay = rawById.get(lr);
+      if (lay && lay.type === 'IFCMATERIALLAYER') {
+        const mRef = lay.attrs[0];
+        if (mRef && mRef.ref !== undefined) {
+          const m = rawById.get(mRef.ref);
+          if (m && m.type === 'IFCMATERIAL') {
+            const n = typeof m.attrs[0] === 'string' ? m.attrs[0] : null;
+            if (n) names.push(n);
+          }
+        }
+      }
+    }
+  } else if (matEnt.type === 'IFCMATERIALCONSTITUENTSET') {
+    const constRefs = getRefs(matEnt.attrs[2]);
+    for (const cr of constRefs) {
+      const c = rawById.get(cr);
+      if (c && c.type === 'IFCMATERIALCONSTITUENT') {
+        const mRef = c.attrs[2];
+        if (mRef && mRef.ref !== undefined) {
+          const m = rawById.get(mRef.ref);
+          if (m && m.type === 'IFCMATERIAL') {
+            const n = typeof m.attrs[0] === 'string' ? m.attrs[0] : null;
+            if (n) names.push(n);
+          }
+        }
+      }
+    }
+  } else if (matEnt.type === 'IFCMATERIALLIST') {
+    // attrs[0] = list of material refs
+    const mRefs = getRefs(matEnt.attrs[0]);
+    for (const mr of mRefs) {
+      const m = rawById.get(mr);
+      if (m && m.type === 'IFCMATERIAL') {
+        const n = typeof m.attrs[0] === 'string' ? m.attrs[0] : null;
+        if (n) names.push(n);
+      }
+    }
+  }
+  return names;
+}
+
+/* ── Value Constraint Matching ─────────────────────────────────── */
+function matchConstraint(actual, constraint) {
+  if (!constraint || constraint.type === 'none' || !constraint.type) return true;
+  const a = actual == null ? '' : String(actual);
+  if (constraint.type === 'simple') {
+    return a.toLowerCase() === (constraint.value || constraint.simpleValue || '').toLowerCase();
+  }
+  if (constraint.type === 'enumeration') {
+    return (constraint.values || []).some(v => v.toLowerCase() === a.toLowerCase());
+  }
+  if (constraint.type === 'pattern') {
+    try {
+      const pat = constraint.pattern || constraint.value || '';
+      return new RegExp('^(' + pat + ')$', 'i').test(a);
+    } catch { return false; }
+  }
+  if (constraint.type === 'bounds') {
+    const n = parseFloat(a);
+    if (isNaN(n)) return false;
+    const minI = constraint.minInclusive !== '' && constraint.minInclusive != null ? parseFloat(constraint.minInclusive) : null;
+    const maxI = constraint.maxInclusive !== '' && constraint.maxInclusive != null ? parseFloat(constraint.maxInclusive) : null;
+    const minE = constraint.minExclusive !== '' && constraint.minExclusive != null ? parseFloat(constraint.minExclusive) : null;
+    const maxE = constraint.maxExclusive !== '' && constraint.maxExclusive != null ? parseFloat(constraint.maxExclusive) : null;
+    if (minI != null && n < minI) return false;
+    if (maxI != null && n > maxI) return false;
+    if (minE != null && n <= minE) return false;
+    if (maxE != null && n >= maxE) return false;
+    return true;
+  }
+  return true;
+}
+
+/* ── Facet Matching ────────────────────────────────────────────── */
+// Returns true if element matches the facet (for applicability)
+// Returns {pass, reason} for requirements
+function facetMatchesElement(facet, elem, index) {
+  if (facet.type === 'entity') {
+    // name can be pipe-separated list
+    const allowed = (facet.name || '').split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (allowed.length && !allowed.includes(elem.type)) return false;
+    if (facet.predefinedType) {
+      const allowedPT = facet.predefinedType.split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+      const elemPT = (elem.predefinedType || '').toUpperCase();
+      if (!allowedPT.includes(elemPT)) return false;
+    }
+    return true;
+  }
+
+  if (facet.type === 'attribute') {
+    const attrMap = {
+      GlobalId: 'globalId', Name: 'name', Description: 'description',
+      Tag: 'tag', ObjectType: 'objectType', PredefinedType: 'predefinedType',
+      LongName: 'name', // fallback
+    };
+    const field = attrMap[facet.name] || facet.name.charAt(0).toLowerCase() + facet.name.slice(1);
+    const val = elem[field];
+    if (!facet.value) return val != null && val !== '';
+    return val != null && matchConstraint(val, facet.value);
+  }
+
+  if (facet.type === 'property') {
+    const psets = index.propsets.get(elem.id) || [];
+    for (const ps of psets) {
+      if (!matchConstraint(ps.name, toConstraint(facet.propertySet))) continue;
+      const prop = ps.props.get(facet.baseName);
+      if (!prop) continue;
+      // Found the property
+      if (!facet.value) return true; // no value constraint = just needs to exist
+      return matchConstraint(prop.value, facet.value);
+    }
+    // Check by regex/pattern over all psets
+    if (facet.propertySet && facet.propertySet.includes('*')) {
+      // Pattern match
+      for (const ps of psets) {
+        try {
+          const regex = new RegExp('^' + facet.propertySet.replace(/\*/g, '.*') + '$', 'i');
+          if (!regex.test(ps.name)) continue;
+          const prop = ps.props.get(facet.baseName);
+          if (!prop) continue;
+          if (!facet.value) return true;
+          return matchConstraint(prop.value, facet.value);
+        } catch { continue; }
+      }
+    }
+    return false;
+  }
+
+  if (facet.type === 'classification') {
+    const clsf = index.classifications.get(elem.id) || [];
+    for (const c of clsf) {
+      if (facet.system && !matchConstraint(c.system, toConstraint(facet.system))) continue;
+      if (!facet.value) return true;
+      // Check identification or value
+      if (matchConstraint(c.identification, facet.value) || matchConstraint(c.value, facet.value)) return true;
+    }
+    return false;
+  }
+
+  if (facet.type === 'material') {
+    const mats = index.materials.get(elem.id) || [];
+    if (!facet.value) return mats.length > 0;
+    return mats.some(m => matchConstraint(m, facet.value));
+  }
+
+  if (facet.type === 'partof') {
+    const parts = index.partOf.get(elem.id) || [];
+    for (const p of parts) {
+      if (facet.relation && p.relation !== facet.relation) continue;
+      if (!facet.name) return true;
+      // Check parent entity type
+      const parent = index.entities.get(p.parentId);
+      if (!parent) continue;
+      const allowed = facet.name.split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (allowed.length && !allowed.includes(parent.type)) continue;
+      if (facet.predefinedType) {
+        const allowedPT = facet.predefinedType.split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+        const parentPT = (parent.predefinedType || '').toUpperCase();
+        if (!allowedPT.includes(parentPT)) continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  return true;
+}
+
+// Convert a plain string to a simple constraint object
+function toConstraint(s) {
+  if (!s) return null;
+  return { type: 'simple', value: s };
+}
+
+// Check a requirement facet against an element; returns {pass, reason}
+function checkRequirementFacet(facet, elem, index) {
+  const card = facet.cardinality || 'required';
+
+  if (facet.type === 'property') {
+    const psets = index.propsets.get(elem.id) || [];
+    let foundPset = null;
+    let foundProp = null;
+    for (const ps of psets) {
+      if (!matchConstraint(ps.name, toConstraint(facet.propertySet))) continue;
+      foundPset = ps;
+      const prop = ps.props.get(facet.baseName);
+      if (prop !== undefined) { foundProp = prop; break; }
+    }
+
+    if (card === 'prohibited') {
+      if (foundProp !== null) return { pass: false, reason: `Property '${facet.propertySet}.${facet.baseName}' ist vorhanden (verboten)` };
+      return { pass: true };
+    }
+    if (card === 'optional') {
+      if (foundProp === null) return { pass: true }; // not present = OK for optional
+      if (!facet.value) return { pass: true };
+      if (!matchConstraint(foundProp.value, facet.value))
+        return { pass: false, reason: `Property '${facet.propertySet}.${facet.baseName}' hat falschen Wert: '${foundProp.value}'` };
+      return { pass: true };
+    }
+    // required
+    if (foundProp === null) {
+      if (!foundPset) return { pass: false, reason: `PropertySet '${facet.propertySet}' nicht gefunden` };
+      return { pass: false, reason: `Property '${facet.baseName}' in '${facet.propertySet}' nicht gefunden` };
+    }
+    if (facet.dataType) {
+      const expectedDT = facet.dataType.toUpperCase();
+      const actualDT = (foundProp.ifcType || '').toUpperCase();
+      if (actualDT && actualDT !== expectedDT)
+        return { pass: false, reason: `Property '${facet.propertySet}.${facet.baseName}' hat Datentyp '${actualDT}' statt '${expectedDT}'` };
+    }
+    if (!facet.value) return { pass: true };
+    if (!matchConstraint(foundProp.value, facet.value))
+      return { pass: false, reason: `Property '${facet.propertySet}.${facet.baseName}' hat Wert '${foundProp.value}' (Erwartung nicht erfüllt)` };
+    return { pass: true };
+  }
+
+  if (facet.type === 'attribute') {
+    const attrMap = {
+      GlobalId: 'globalId', Name: 'name', Description: 'description',
+      Tag: 'tag', ObjectType: 'objectType', PredefinedType: 'predefinedType',
+    };
+    const field = attrMap[facet.name] || facet.name.charAt(0).toLowerCase() + facet.name.slice(1);
+    const val = elem[field];
+    const hasVal = val != null && val !== '';
+
+    if (card === 'prohibited') {
+      if (hasVal) return { pass: false, reason: `Attribut '${facet.name}' ist vorhanden (verboten): '${val}'` };
+      return { pass: true };
+    }
+    if (card === 'optional') {
+      if (!hasVal) return { pass: true };
+      if (!facet.value) return { pass: true };
+      if (!matchConstraint(val, facet.value))
+        return { pass: false, reason: `Attribut '${facet.name}' hat Wert '${val}' (Erwartung nicht erfüllt)` };
+      return { pass: true };
+    }
+    // required
+    if (!hasVal) return { pass: false, reason: `Attribut '${facet.name}' fehlt oder ist leer` };
+    if (!facet.value) return { pass: true };
+    if (!matchConstraint(val, facet.value))
+      return { pass: false, reason: `Attribut '${facet.name}' hat Wert '${val}' (Erwartung nicht erfüllt)` };
+    return { pass: true };
+  }
+
+  if (facet.type === 'classification') {
+    const clsf = index.classifications.get(elem.id) || [];
+    const hasMatch = clsf.some(c => {
+      if (facet.system && !matchConstraint(c.system, toConstraint(facet.system))) return false;
+      if (!facet.value) return true;
+      return matchConstraint(c.identification, facet.value) || matchConstraint(c.value, facet.value);
+    });
+    if (card === 'prohibited') {
+      if (hasMatch) return { pass: false, reason: `Klassifikation '${facet.system||''}' ist vorhanden (verboten)` };
+      return { pass: true };
+    }
+    if (!hasMatch) return { pass: false, reason: `Klassifikation '${facet.system||''}' nicht gefunden` };
+    return { pass: true };
+  }
+
+  if (facet.type === 'material') {
+    const mats = index.materials.get(elem.id) || [];
+    const hasMatch = facet.value ? mats.some(m => matchConstraint(m, facet.value)) : mats.length > 0;
+    if (card === 'prohibited') {
+      if (hasMatch) return { pass: false, reason: 'Material ist vorhanden (verboten)' };
+      return { pass: true };
+    }
+    if (!hasMatch) {
+      if (mats.length === 0) return { pass: false, reason: 'Keine Materialzuweisung vorhanden' };
+      return { pass: false, reason: `Material mit Wert '${facet.value?.value||facet.value?.values?.join('/')||''}' nicht gefunden` };
+    }
+    return { pass: true };
+  }
+
+  if (facet.type === 'partof') {
+    const parts = index.partOf.get(elem.id) || [];
+    const hasMatch = parts.some(p => {
+      if (facet.relation && p.relation !== facet.relation) return false;
+      if (!facet.name) return true;
+      const parent = index.entities.get(p.parentId);
+      if (!parent) return false;
+      const allowed = facet.name.split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (allowed.length && !allowed.includes(parent.type)) return false;
+      return true;
+    });
+    if (card === 'prohibited') {
+      if (hasMatch) return { pass: false, reason: `Relation '${facet.relation||''}' ist vorhanden (verboten)` };
+      return { pass: true };
+    }
+    if (!hasMatch) return { pass: false, reason: `Relation '${facet.relation||''}' zu '${facet.name||'beliebigem Element'}' nicht gefunden` };
+    return { pass: true };
+  }
+
+  if (facet.type === 'entity') {
+    // Entity as requirement: check name and predefined type
+    const allowed = (facet.name || '').split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (allowed.length && !allowed.includes(elem.type)) {
+      return { pass: false, reason: `Element-Typ '${elem.type}' stimmt nicht überein (erwartet: ${allowed.join('/')})` };
+    }
+    if (facet.predefinedType) {
+      const allowedPT = facet.predefinedType.split('|').map(s => s.trim().toUpperCase()).filter(Boolean);
+      const elemPT = (elem.predefinedType || '').toUpperCase();
+      if (!allowedPT.includes(elemPT)) {
+        return { pass: false, reason: `PredefinedType '${elemPT}' stimmt nicht überein (erwartet: ${allowedPT.join('/')})` };
+      }
+    }
+    return { pass: true };
+  }
+
+  return { pass: true };
+}
+
+/* ── Run IDS Specifications ────────────────────────────────────── */
+function runSpecifications(specs, index) {
+  const results = [];
+  const elements = Array.from(index.entities.values());
+
+  for (let si = 0; si < specs.length; si++) {
+    const spec = specs[si];
+    const appFacets = spec.applicability || [];
+    const reqFacets = spec.requirements  || [];
+
+    // Find applicable elements (all applicability facets must match — AND logic)
+    const applicable = appFacets.length === 0
+      ? elements
+      : elements.filter(elem => appFacets.every(f => facetMatchesElement(f, elem, index)));
+
+    if (applicable.length === 0) {
+      results.push({
+        specIndex: si, specName: spec.name || `Spezifikation ${si+1}`,
+        status: 'not_applicable',
+        applicableCount: 0, passCount: 0, failCount: 0,
+        failures: [],
+      });
+      continue;
+    }
+
+    // Check requirements
+    const failures = [];
+    for (const elem of applicable) {
+      if (reqFacets.length === 0) continue; // no requirements = all pass
+      const reasons = [];
+      for (const f of reqFacets) {
+        const result = checkRequirementFacet(f, elem, index);
+        if (!result.pass) reasons.push(result.reason);
+      }
+      if (reasons.length) {
+        failures.push({
+          elemId:   elem.id,
+          globalId: elem.globalId || String(elem.id),
+          name:     elem.name || null,
+          type:     elem.type,
+          reasons,
+        });
+      }
+    }
+
+    const passCount = applicable.length - failures.length;
+    results.push({
+      specIndex: si, specName: spec.name || `Spezifikation ${si+1}`,
+      status: failures.length === 0 ? 'pass' : 'fail',
+      applicableCount: applicable.length,
+      passCount,
+      failCount: failures.length,
+      failures,
+    });
+  }
+  return results;
+}
+
+/* ── Main Run Function ─────────────────────────────────────────── */
+async function runIDSCheck() {
+  if (!checkerState.ifcFile) { showToast('Bitte zuerst eine IFC-Datei laden', true); return; }
+
+  // Determine which IDS to use
+  const idsSource = document.querySelector('input[name="ids-source"]:checked')?.value || 'current';
+  let specsToCheck, metaToUse;
+
+  if (idsSource === 'current') {
+    if (!state.specs.length) { showToast('Keine Spezifikationen im Builder vorhanden', true); return; }
+    specsToCheck = state.specs;
+    metaToUse    = getMeta();
+  } else {
+    if (!checkerIdsFileSpecs) { showToast('Bitte zuerst eine IDS-Datei laden', true); return; }
+    specsToCheck = checkerIdsFileSpecs;
+    metaToUse    = checkerIdsFileMeta;
+  }
+
+  // Show progress
+  const progress   = document.getElementById('checker-progress');
+  const progressFill = document.getElementById('checker-progress-fill');
+  const progressMsg  = document.getElementById('checker-progress-msg');
+  const progressTitle = document.getElementById('checker-progress-title');
+  const runBtn     = document.getElementById('btn-run-check');
+  const resultsSection = document.getElementById('checker-results-section');
+  const exportBtn  = document.getElementById('btn-checker-export');
+
+  progress.classList.add('active');
+  resultsSection.style.display = 'none';
+  exportBtn.style.display = 'none';
+  runBtn.disabled = true;
+
+  function setProgress(pct, msg) {
+    progressFill.style.width = Math.round(pct * 100) + '%';
+    progressMsg.textContent  = msg;
+  }
+
+  try {
+    progressTitle.textContent = 'IFC wird verarbeitet…';
+    setProgress(0, 'IFC-Datei wird gelesen…');
+
+    // Read file text
+    let text;
+    if (checkerState.ifcText) {
+      text = checkerState.ifcText;
+    } else {
+      text = await checkerState.ifcFile.text();
+      checkerState.ifcText = text;
+    }
+
+    setProgress(0.05, 'IFC wird gelesen…');
+    await new Promise(r => setTimeout(r, 0));
+
+    // Parse IFC
+    const index = await parseIFCStep(text, (pct, msg) => setProgress(pct, msg));
+
+    setProgress(0.9, `Spezifikationen werden geprüft… (${specsToCheck.length} Stück)`);
+    progressTitle.textContent = 'Prüfung läuft…';
+    await new Promise(r => setTimeout(r, 0));
+
+    // Run checks
+    const results = runSpecifications(specsToCheck, index);
+    checkerState.results = { results, specs: specsToCheck, meta: metaToUse, ifcFile: checkerState.ifcFile.name };
+
+    setProgress(1, 'Fertig!');
+    await new Promise(r => setTimeout(r, 50));
+
+    progress.classList.remove('active');
+    renderCheckerResults(results);
+    resultsSection.style.display = '';
+    exportBtn.style.display = '';
+
+  } catch(e) {
+    progress.classList.remove('active');
+    showToast('Fehler: ' + e.message, true);
+    console.error(e);
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+/* ── Render Results ────────────────────────────────────────────── */
+function renderCheckerResults(results) {
+  const summary = document.getElementById('checker-summary-bar');
+  const list    = document.getElementById('checker-results-list');
+
+  const totalSpecs      = results.length;
+  const passedSpecs     = results.filter(r => r.status === 'pass').length;
+  const naSpecs         = results.filter(r => r.status === 'not_applicable').length;
+  const failedSpecs     = results.filter(r => r.status === 'fail').length;
+  const totalApplicable = results.reduce((s, r) => s + r.applicableCount, 0);
+  const totalFailed     = results.reduce((s, r) => s + r.failCount, 0);
+
+  const summaryColor = failedSpecs === 0 ? '#16a34a' : '#dc2626';
+  summary.innerHTML = `
+    <div class="checker-summary-stat">
+      <strong style="color:${summaryColor};font-size:16px">${passedSpecs}/${totalSpecs}</strong>
+      <span>Spezifikationen bestanden</span>
+    </div>
+    <div style="width:1px;height:20px;background:var(--c-border)"></div>
+    <div class="checker-summary-stat">
+      <strong>${totalApplicable}</strong><span>Elemente geprüft</span>
+    </div>
+    ${totalFailed > 0 ? `
+    <div style="width:1px;height:20px;background:var(--c-border)"></div>
+    <div class="checker-summary-stat">
+      <strong style="color:#dc2626">${totalFailed}</strong><span>Fehler</span>
+    </div>` : ''}
+    ${naSpecs > 0 ? `
+    <div style="width:1px;height:20px;background:var(--c-border)"></div>
+    <div class="checker-summary-stat">
+      <strong style="color:#64748b">${naSpecs}</strong><span>Nicht anwendbar</span>
+    </div>` : ''}
+  `;
+
+  if (!results.length) {
+    list.innerHTML = '<div class="checker-empty">Keine Spezifikationen geprüft.</div>';
+    return;
+  }
+
+  list.innerHTML = results.map((r, i) => {
+    const cls   = r.status === 'pass' ? 'pass' : r.status === 'not_applicable' ? 'na' : 'fail';
+    const badge = r.status === 'pass'
+      ? '<span class="badge-pass">✓ Bestanden</span>'
+      : r.status === 'not_applicable'
+        ? '<span class="badge-na">— Nicht anwendbar</span>'
+        : '<span class="badge-fail">✗ Fehlgeschlagen</span>';
+
+    const meta = r.status === 'not_applicable'
+      ? 'Keine passenden Elemente im Modell gefunden'
+      : `${r.passCount} von ${r.applicableCount} Element${r.applicableCount!==1?'en':''} bestanden`;
+
+    let bodyHtml = '';
+    if (r.failures.length > 0) {
+      const shown = r.failures.slice(0, 50);
+      bodyHtml = shown.map(f => {
+        const label = f.name ? `${f.type}: ${escChecker(f.name)}` : `${f.type} (${escChecker(f.globalId)})`;
+        const reasons = f.reasons.map(reason =>
+          `<div class="failure-reason">→ ${escChecker(reason)}</div>`
+        ).join('');
+        return `<div class="failure-item"><div class="failure-item-label">${label}</div>${reasons}</div>`;
+      }).join('');
+      if (r.failures.length > 50) {
+        bodyHtml += `<div style="font-size:11px;color:var(--c-muted);padding:6px 0">… und ${r.failures.length - 50} weitere Fehler</div>`;
+      }
+    } else if (r.status === 'pass' && r.applicableCount > 0) {
+      bodyHtml = `<div style="color:#16a34a;font-size:12px">Alle ${r.applicableCount} Elemente erfüllen die Anforderungen.</div>`;
+    }
+
+    const hasBody = bodyHtml.length > 0;
+    return `<div class="check-result-card ${cls}" id="crc-${i}">
+      <div class="check-result-header" onclick="${hasBody ? `toggleCheckerCard(${i})` : ''}">
+        <div style="flex:1">
+          <div class="check-result-name">${escChecker(r.specName)}</div>
+          <div class="check-result-meta">${meta}</div>
+        </div>
+        ${badge}
+        ${hasBody ? '<svg class="check-result-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' : ''}
+      </div>
+      ${hasBody ? `<div class="check-result-body">${bodyHtml}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleCheckerCard(i) {
+  const card = document.getElementById('crc-' + i);
+  if (card) card.classList.toggle('open');
+}
+
+/* ── Export Results ────────────────────────────────────────────── */
+function exportCheckerResults() {
+  if (!checkerState.results) return;
+  const { results, meta, ifcFile } = checkerState.results;
+  const report = {
+    title: 'IDS Check Report',
+    date:  new Date().toISOString(),
+    idsTitle: meta?.title || 'Ohne Titel',
+    ifcFile,
+    summary: {
+      totalSpecs:   results.length,
+      passedSpecs:  results.filter(r => r.status === 'pass').length,
+      failedSpecs:  results.filter(r => r.status === 'fail').length,
+      naSpecs:      results.filter(r => r.status === 'not_applicable').length,
+      totalElements: results.reduce((s, r) => s + r.applicableCount, 0),
+      failedElements: results.reduce((s, r) => s + r.failCount, 0),
+    },
+    results,
+  };
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'ids-check-report-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('✓ Bericht exportiert');
+}
+
+function escChecker(s) {
+  if (!s && s !== 0) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 /* ── Init ──────────────────────────────────────────────────────── */
 document.getElementById('meta-date').value    = new Date().toISOString().split('T')[0];
