@@ -2374,6 +2374,7 @@ document.addEventListener('keydown', e => {
 let aiCfg = {
   provider: '', apiKey: '', serverUrl: 'http://localhost:11434',
   model: 'claude-sonnet-4-5',
+  modelVerified: false, // true erst nach erfolgreichem Verbindungstest
   discipline: '', customPsets: '', siaPhasen: '',
 };
 let aiMessages = [];
@@ -2543,12 +2544,12 @@ function renderObStep() {
               5. Key kopieren und hier einfügen
             </p>
             <div class="ob-key-row">
-              <input id="ob-apikey" type="password" placeholder="sk-ant-api03-…" value="${aiCfg.apiKey}" />
+              <input id="ob-apikey" type="password" placeholder="sk-ant-api03-…" value="${aiCfg.apiKey}" oninput="aiCfg.modelVerified=false;document.getElementById('ob-model-info').innerHTML='Modell wird beim Testen automatisch erkannt.'" />
               <button class="btn btn-secondary btn-sm" id="ob-test-btn" onclick="testAIConnection()">Testen</button>
             </div>
             <div class="ob-hint">⚠ Der Key wird nur lokal in deinem Browser gespeichert. Niemand sonst hat Zugriff.</div>
             <div id="ob-model-info" style="margin-top:8px;font-size:12px;color:var(--c-muted);min-height:18px">
-              ${aiCfg.model ? `✓ Modell erkannt: <code style="background:var(--c-bg);padding:1px 5px;border-radius:4px">${aiCfg.model}</code>` : 'Modell wird beim Testen automatisch erkannt.'}
+              ${aiCfg.modelVerified && aiCfg.model ? `✓ Modell erkannt: <code style="background:var(--c-bg);padding:1px 5px;border-radius:4px">${aiCfg.model}</code>` : 'Modell wird beim Testen automatisch erkannt.'}
             </div>
             <div style="margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px">
               <div style="font-weight:600;margin-bottom:6px;color:#92400e">💰 Kostenkontrolle empfohlen</div>
@@ -2644,6 +2645,7 @@ async function testAIConnection() {
       const detected = await fetchBestAnthropicModel(aiCfg.apiKey);
       if (detected) {
         aiCfg.model = detected;
+        aiCfg.modelVerified = true;
         saveAICfg();
         if (modelInfo) modelInfo.innerHTML =
           `✓ Modell erkannt: <code style="background:var(--c-bg);padding:1px 5px;border-radius:4px">${detected}</code>`;
