@@ -3665,6 +3665,7 @@ async function parseIFCStep(text, onProgress) {
   const REL_TYPES = new Set([
     'IFCRELDEFINESBYPROPERTIES','IFCPROPERTYSET','IFCPROPERTYSINGLEVALUE',
     'IFCRELASSOCIATESMATERIAL','IFCMATERIAL','IFCMATERIALLAYERSET','IFCMATERIALLAYER',
+    'IFCMATERIALLAYERSETUSAGE','IFCMATERIALPROFILESET','IFCMATERIALPROFILE','IFCMATERIALPROFILESETUSAGE',
     'IFCMATERIALCONSTITUENTSET','IFCMATERIALCONSTITUENT','IFCRELASSOCIATESCLASSIFICATION',
     'IFCCLASSIFICATIONREFERENCE','IFCCLASSIFICATION','IFCRELAGGREGATES',
     'IFCRELCONTAINEDINSPATIALSTRUCTURE','IFCRELDEFINESBYTYPE',
@@ -3693,7 +3694,10 @@ async function parseIFCStep(text, onProgress) {
         name:          typeof attrs[2] === 'string' ? attrs[2] : (attrs[2] == null ? null : null),
         description:   typeof attrs[3] === 'string' ? attrs[3] : null,
         objectType:    typeof attrs[4] === 'string' ? attrs[4] : null,
-        tag:           attrs[6] !== undefined && typeof attrs[6] === 'string' ? attrs[6] : null,
+        // Tag is at attrs[7] for IfcElement subtypes (attrs[5]=ObjectPlacement, attrs[6]=Representation are refs)
+        // For IfcSpatialElement subtypes attrs[7] is LongName — stored in both tag and longName
+        tag:           typeof attrs[7] === 'string' ? attrs[7] : null,
+        longName:      typeof attrs[7] === 'string' ? attrs[7] : null,
         predefinedType: null,
       };
       // Fix: name can be null from $
@@ -3781,10 +3785,11 @@ async function parseIFCStep(text, onProgress) {
       // Get classification info
       let system = null, value = null, identification = null;
       if (classEnt.type === 'IFCCLASSIFICATIONREFERENCE') {
-        identification = typeof classEnt.attrs[2] === 'string' ? classEnt.attrs[2] : null;
-        value          = typeof classEnt.attrs[3] === 'string' ? classEnt.attrs[3] : null;
-        // attrs[4] = ReferencedSource (ref to IFCCLASSIFICATION)
-        const srcRef = classEnt.attrs[4];
+        // IFC2X3 + IFC4: attrs[0]=Location, attrs[1]=Identification/ItemReference, attrs[2]=Name, attrs[3]=ReferencedSource
+        identification = typeof classEnt.attrs[1] === 'string' ? classEnt.attrs[1] : null;
+        value          = typeof classEnt.attrs[2] === 'string' ? classEnt.attrs[2] : null;
+        // attrs[3] = ReferencedSource (ref to IFCCLASSIFICATION) — same index in IFC2X3 and IFC4
+        const srcRef = classEnt.attrs[3];
         if (srcRef && srcRef.ref !== undefined) {
           const srcEnt = index.rawById.get(srcRef.ref);
           if (srcEnt && srcEnt.type === 'IFCCLASSIFICATION') {
@@ -3826,7 +3831,7 @@ async function parseIFCStep(text, onProgress) {
     // IFCRELASSIGNSTOGROUP: attrs[4]=RelatedObjects, attrs[5] or 6=RelatingGroup
     if (type === 'IFCRELASSIGNSTOGROUP') {
       const children = getRefs(attrs[4]);
-      const grpRef   = attrs[6] || attrs[5]; // position varies
+      const grpRef   = attrs[6]; // RelatingGroup always at position 6 (after RelatedObjectsType at 5)
       if (!grpRef || grpRef.ref === undefined) continue;
       for (const childId of children) {
         if (!index.partOf.has(childId)) index.partOf.set(childId, []);
@@ -3880,7 +3885,7 @@ async function parseIFCStep(text, onProgress) {
       }
       for (const elemId of relObjs) {
         const elem = index.entities.get(elemId);
-        if (elem && !elem.predefinedType && pt) {
+        if (elem && (!elem.predefinedType || elem.predefinedType === 'NOTDEFINED' || elem.predefinedType === 'USERDEFINED') && pt && pt !== 'NOTDEFINED' && pt !== 'USERDEFINED') {
           elem.predefinedType = pt;
         }
       }
@@ -3908,8 +3913,16 @@ function extractMaterialNames(matEnt, rawById) {
   if (matEnt.type === 'IFCMATERIAL') {
     const n = typeof matEnt.attrs[0] === 'string' ? matEnt.attrs[0] : null;
     if (n) names.push(n);
+  } else if (matEnt.type === 'IFCMATERIALLAYERSETUSAGE') {
+    // attrs[0] = ForLayerSet (ref to IFCMATERIALLAYERSET) — common for walls/slabs in IFC4
+    const lsRef = matEnt.attrs[0];
+    if (lsRef && lsRef.ref !== undefined) {
+      const ls = rawById.get(lsRef.ref);
+      if (ls) names.push(...extractMaterialNames(ls, rawById));
+    }
   } else if (matEnt.type === 'IFCMATERIALLAYERSET') {
-    const layerRefs = getRefs(matEnt.attrs[1]);
+    // attrs[0] = MaterialLayers (list), attrs[1] = LayerSetName
+    const layerRefs = getRefs(matEnt.attrs[0]);
     for (const lr of layerRefs) {
       const lay = rawById.get(lr);
       if (lay && lay.type === 'IFCMATERIALLAYER') {
@@ -3929,6 +3942,29 @@ function extractMaterialNames(matEnt, rawById) {
       const c = rawById.get(cr);
       if (c && c.type === 'IFCMATERIALCONSTITUENT') {
         const mRef = c.attrs[2];
+        if (mRef && mRef.ref !== undefined) {
+          const m = rawById.get(mRef.ref);
+          if (m && m.type === 'IFCMATERIAL') {
+            const n = typeof m.attrs[0] === 'string' ? m.attrs[0] : null;
+            if (n) names.push(n);
+          }
+        }
+      }
+    }
+  } else if (matEnt.type === 'IFCMATERIALPROFILESETUSAGE') {
+    // attrs[0] = ForProfileSet (ref to IFCMATERIALPROFILESET) — common for columns/beams in IFC4
+    const psRef = matEnt.attrs[0];
+    if (psRef && psRef.ref !== undefined) {
+      const ps = rawById.get(psRef.ref);
+      if (ps) names.push(...extractMaterialNames(ps, rawById));
+    }
+  } else if (matEnt.type === 'IFCMATERIALPROFILESET') {
+    // attrs[2] = MaterialProfiles (list of IFCMATERIALPROFILE)
+    const profRefs = getRefs(matEnt.attrs[2]);
+    for (const pr of profRefs) {
+      const prof = rawById.get(pr);
+      if (prof && prof.type === 'IFCMATERIALPROFILE') {
+        const mRef = prof.attrs[2]; // attrs[2] = Material ref
         if (mRef && mRef.ref !== undefined) {
           const m = rawById.get(mRef.ref);
           if (m && m.type === 'IFCMATERIAL') {
@@ -4004,7 +4040,7 @@ function facetMatchesElement(facet, elem, index) {
     const attrMap = {
       GlobalId: 'globalId', Name: 'name', Description: 'description',
       Tag: 'tag', ObjectType: 'objectType', PredefinedType: 'predefinedType',
-      LongName: 'name', // fallback
+      LongName: 'longName',
     };
     const field = attrMap[facet.name] || facet.name.charAt(0).toLowerCase() + facet.name.slice(1);
     const val = elem[field];
