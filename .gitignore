@@ -1,1 +1,11 @@
+# Projektnotizen (intern, nicht auf GitHub)
 CLAUDE.md
+
+# IFC-Testdateien (zu gross für Git)
+*.ifc
+*.ifczip
+
+# Sonstiges
+*.png.png
+Thumbs.db
+.DS_Store
