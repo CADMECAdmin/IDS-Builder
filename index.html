@@ -736,10 +736,6 @@ body { background: var(--c-bg); min-height: 100vh; }
         <h2>IDS Checker</h2>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-secondary btn-sm" id="btn-checker-export" style="display:none">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Ergebnisse exportieren
-        </button>
         <button class="btn btn-ghost btn-sm" id="btn-checker-html" style="display:none">
           📄 HTML-Bericht
         </button>
@@ -2501,7 +2497,6 @@ document.getElementById('checker-modal-close').onclick = closeCheckerModal;
 document.getElementById('checker-modal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeCheckerModal();
 });
-document.getElementById('btn-checker-export').onclick = exportCheckerResults;
 document.getElementById('btn-checker-html').onclick   = exportHTMLReport;
 document.getElementById('btn-checker-bcf').onclick    = exportBCFReport;
 
@@ -4374,13 +4369,11 @@ async function runIDSCheck() {
   const progressTitle = document.getElementById('checker-progress-title');
   const runBtn     = document.getElementById('btn-run-check');
   const resultsSection = document.getElementById('checker-results-section');
-  const exportBtn  = document.getElementById('btn-checker-export');
   const htmlBtn    = document.getElementById('btn-checker-html');
   const bcfBtn     = document.getElementById('btn-checker-bcf');
 
   progress.classList.add('active');
   resultsSection.style.display = 'none';
-  exportBtn.style.display = 'none';
   htmlBtn.style.display   = 'none';
   bcfBtn.style.display    = 'none';
   runBtn.disabled = true;
@@ -4423,7 +4416,6 @@ async function runIDSCheck() {
     progress.classList.remove('active');
     renderCheckerResults(results);
     resultsSection.style.display = '';
-    exportBtn.style.display = '';
     htmlBtn.style.display   = '';
     bcfBtn.style.display    = '';
 
@@ -4524,34 +4516,6 @@ function toggleCheckerCard(i) {
   if (card) card.classList.toggle('open');
 }
 
-/* ── Export Results ────────────────────────────────────────────── */
-function exportCheckerResults() {
-  if (!checkerState.results) return;
-  const { results, meta, ifcFile } = checkerState.results;
-  const report = {
-    title: 'IDS Check Report',
-    date:  new Date().toISOString(),
-    idsTitle: meta?.title || 'Ohne Titel',
-    ifcFile,
-    summary: {
-      totalSpecs:   results.length,
-      passedSpecs:  results.filter(r => r.status === 'pass').length,
-      failedSpecs:  results.filter(r => r.status === 'fail').length,
-      naSpecs:      results.filter(r => r.status === 'not_applicable').length,
-      totalElements: results.reduce((s, r) => s + r.applicableCount, 0),
-      failedElements: results.reduce((s, r) => s + r.failCount, 0),
-    },
-    results,
-  };
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'ids-check-report-' + new Date().toISOString().slice(0,10) + '.json';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  showToast('✓ Bericht exportiert');
-}
 
 function escChecker(s) {
   if (!s && s !== 0) return '';
