@@ -4848,17 +4848,24 @@ function exportBCFReport() {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
   }
 
+  // Entities without body geometry – viewpoint would show empty 3D view
+  const NO_GEOMETRY_TYPES = new Set(['IFCPROJECT', 'IFCSITE']);
+
   let topicCounter = 0;
   outer: for (const r of failingResults) {
     for (const f of r.failures) {
       if (topicCounter >= BCF_MAX_TOPICS) break outer;
       topicCounter++;
-      const topicGuid = newUUID();
-      const vpGuid    = newUUID();
-      const elemLabel = f.name || f.globalId || String(f.elemId);
-      const title     = `${r.specName}: ${f.type} ${elemLabel}`;
-      const description = (f.reasons || []).join('\n');
-      const hasGuid   = f.globalId && f.globalId.trim().length > 0;
+      const topicGuid     = newUUID();
+      const vpGuid        = newUUID();
+      const elemLabel     = f.name || f.globalId || String(f.elemId);
+      const isNonGeom     = NO_GEOMETRY_TYPES.has((f.type || '').toUpperCase());
+      const hasGuid       = !isNonGeom && f.globalId && f.globalId.trim().length > 0;
+      const title         = `${r.specName}: ${f.type} ${elemLabel}`;
+      const reasonsText   = (f.reasons || []).join('\n');
+      const description   = isNonGeom
+        ? `${reasonsText}\n[Projekteigenschaft – kein 3D-Bezug]`
+        : reasonsText;
 
       const viewpointsBlock = hasGuid
         ? `  <Viewpoints Guid="${vpGuid}">
@@ -4886,6 +4893,7 @@ ${viewpointsBlock}
 <VisualizationInfo Guid="${vpGuid}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/buildingSMART/BCF-XML/master/Schemas/visinfo.xsd">
   <Components>
+    <Visibility DefaultVisibility="true"/>
     <Selection>
       <Component IfcGuid="${xmlEsc(f.globalId)}">
         <OriginatingSystem>IDS-Builder</OriginatingSystem>
